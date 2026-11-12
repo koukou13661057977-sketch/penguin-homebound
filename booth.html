@@ -1,81 +1,12 @@
 <!doctype html>
-<html lang="zh-Hans" data-booth="true">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#e7f2f3"><meta name="description" content="在石油泄漏后的南极海岸，带食物回家。五段旅程、三档难度、本机续玩。"><title>企鹅：归巢之路 · Homebound</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='.9em' font-size='54'%3E🐧%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="./style.css"></head>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=./?mode=booth&amp;lang=zh">
+  <title>打开《企鹅：归巢之路》</title>
+</head>
 <body>
-<canvas id="world" aria-label="企鹅归巢之路三维游戏场景"></canvas><div class="vignette"></div>
-<header class="brand"><span class="brand-mark">◈</span><span>蓝色星球计划<small>BLUE PLANET / FIELD NOTES 02</small></span></header>
-<div class="top-actions"><button id="booth-mode" class="icon-button">摊位模式</button><button id="language" class="icon-button" aria-label="切换语言">EN</button><button id="sound" class="icon-button" aria-pressed="false">声音：关</button><button id="fullscreen" class="icon-button">全屏</button><button id="pause" class="icon-button hidden">暂停 <kbd>P</kbd></button></div>
-<main id="intro" class="intro">
- <p id="booth-banner" class="booth-only booth-banner">摊位体验 · 每局约两分钟</p>
- <h1>企鹅<span>归巢之路<span class="orange-dot">。</span></span></h1>
- <p class="intro-copy">幼鸟在等你。穿过漏油海峡，带 4 条鱼回巢。</p>
- <fieldset id="species-select" class="species-select">
-  <legend>你的旅伴</legend>
-  <div>
-   <button type="button" data-species="gentoo" aria-pressed="true" class="selected">巴布亚企鹅</button>
-   <button type="button" data-species="adelie" aria-pressed="false">阿德利企鹅</button>
-   <button type="button" data-species="chinstrap" aria-pressed="false">帽带企鹅</button>
-  </div>
- </fieldset>
- <fieldset class="difficulty">
-  <legend>旅程难度</legend>
-  <div class="difficulty-options">
-   <button type="button" data-difficulty="easy" aria-pressed="false">低</button>
-   <button type="button" data-difficulty="normal" class="selected" aria-pressed="true">中</button>
-   <button type="button" data-difficulty="hard" aria-pressed="false">高</button>
-  </div>
- </fieldset>
- <fieldset id="view-select" class="view-select">
-  <legend>视角</legend>
-  <div class="view-options"><button type="button" data-view="overhead" aria-pressed="true">俯视</button><button type="button" data-view="first" aria-pressed="false">第一人称</button></div>
- </fieldset>
- <button id="continue" class="primary continue hidden">继续上次旅程 <span>↗</span></button><button id="start" class="primary">开启归巢之旅 <span>↗</span></button>
- <div class="intro-links"><button id="show-help">出发指南</button><button id="show-journal">海洋手记</button><button id="show-board">旅程记录</button><button id="show-settings">设置</button></div>
- <button id="booth-staff" class="booth-only booth-staff-link">工作人员</button>
- <p id="save-note" class="prototype">本机自动保存 · 1.10</p>
-</main>
-<div id="scene-caption" class="scene-caption"><p>冰湾 → 觅食湾 → 漏油海峡 → 登陆口 → 归巢</p><div class="caption-line"></div></div>
-<section id="hud" class="hud hidden" aria-label="游戏状态">
- <div id="booth-hud" class="booth-only booth-hud" aria-label="摊位挑战状态"><div><span>剩余时间</span><b id="booth-countdown">01:45</b></div><div><span>给幼鸟留的鱼</span><b id="booth-food">0 / 4</b></div><div class="booth-player"><span>本次玩家</span><b id="booth-number">0001</b></div></div>
- <div class="chapter"><span id="chapter-index">01 / THE FIRST STEP</span><h2 id="chapter-name">冰湾出发</h2><p id="chapter-description"></p><div class="environment-card"><div class="environment-title"><span id="environment-label"></span><b id="environment-value"></b></div><p id="environment-detail"></p><div class="environment-strip"><i id="environment-progress"></i></div><div class="current-note" id="current-note"></div></div><div class="mission-checklist"><span id="mission-food">○ 为幼鸟留下 4 条鱼</span><span id="mission-signal">○ 为受困企鹅呼叫救援（可选）</span></div></div>
- <div class="status-card"><div class="stat" id="temperature-stat"><span><span id="temperature-label">体温</span><small id="temperature-state" aria-live="polite"></small><b id="temperature-text">100</b></span><meter id="temperature" aria-labelledby="temperature-label" min="0" max="100" value="100"></meter></div><div class="stat"><span>体力 <b id="energy-text">100</b></span><meter id="energy" min="0" max="100" value="100"></meter></div><div class="stat oil-stat"><span>羽毛沾油 <b id="oil-text">0%</b></span><meter id="oil" min="0" max="100" value="0"></meter></div><div class="insulation-note"><span>羽毛保温能力</span><b id="insulation">100%</b></div><div class="food-stat"><span>携带的鱼 <b><span id="food">0</span><small> / <span id="capacity">10</span></b></span><small>至少留 <span id="required-food">4</span> 条给幼鸟</small></div></div>
- <div class="route-card"><div><span id="terrain">冰面 · 行走</span><span id="time">00:00</span></div><canvas id="route-map" width="190" height="130" aria-label="前方海图：白色冰面，紫黑色油污，灰色岩石，金色鱼，橙色救援，绿色同伴"></canvas><div class="map-legend"><span>● 自己</span><span>● 鱼</span><span>＋ 救援</span></div><div class="route-track"><i id="route-progress"></i><span></span><span></span></div><div class="route-labels"><span>出发</span><span id="distance">距巢穴</span><span>归巢 ⚑</span></div></div>
- <div id="context-panel" class="context-hint"><span id="context-hint" role="status"></span><progress id="context-progress" class="hidden" max="1" value="0" aria-label="脱网进度"></progress></div><div id="toast" class="toast" role="status"></div>
- <div id="tutorial" class="tutorial hidden"><span>第一次出发 · 随时可在暂停中查看指南</span><p id="tutorial-copy"></p><button id="dismiss-tutorial">明白了 ×</button><div class="booth-only booth-practice"><progress id="booth-practice-progress" max="10" value="0" aria-label="练习进度"></progress><p id="booth-practice-hint">先试试移动，游近金色小鱼即可捕鱼。</p><button id="booth-practice-skip" class="primary" disabled>开始挑战 ↗</button></div></div>
- <div id="treatment" class="treatment hidden" role="status"><h3 id="treatment-stage">清理羽毛</h3><progress id="treatment-progress" max="1" value="0" aria-label="照护进度"></progress></div>
- <div class="controls-dock"><span><kbd>W A S D</kbd> 移动</span><span id="view-hint"><span class="view-hint-keys">左右方向键转头</span><span class="view-hint-touch">拖动右侧转头</span></span><button id="slide"><kbd>空格</kbd> 滑行</button><button id="eat"><kbd>E</kbd> 吃鱼</button><button id="rescue"><kbd>R</kbd> 清理</button><button id="signal"><kbd>F</kbd> 呼叫救援</button><button id="booth-interact" class="booth-only"><kbd>R</kbd> 互动</button></div>
- <div class="touch-pad" aria-label="触屏方向控制"><button data-move="up" aria-label="向前">↑</button><button data-move="left" aria-label="向左">←</button><button data-move="down" aria-label="向后">↓</button><button data-move="right" aria-label="向右">→</button></div>
- <span id="autosave" class="autosave">本机自动保存</span>
-</section>
-<p id="home-feeding" class="home-feeding hidden"></p>
-<dialog id="help-dialog">
- <button class="close" data-close aria-label="关闭">×</button><h2>玩法说明</h2>
- <ol class="guide coast-guide">
-  <li><b>移动</b><p>WASD 或方向键按画面方向移动。冰上按住空格滑行。触屏用下方方向键。</p><p>第一人称用 WASD 移动，按 ← 或 → 转头。触屏可拖动画面右侧转头。</p></li>
-  <li><b>捕鱼</b><p>靠近金色小鱼就能捕鱼。按 E 或点吃鱼补充体力，给幼鸟留 4 条。</p></li>
-  <li><b>塑料与渔网</b><p>塑料漂近时，跟着鱼群移动。看到浮标就留意网边。缠住了，按住提示的方向退出来。</p></li>
-  <li><b>登陆与救援</b><p>等向导让行再上岸。靠近橙色营地或受困企鹅，用互动按钮求助。</p></li>
-  <li><b>风雪</b><p>沾油会更容易失温。进雪地前检查体温，起风时可到岩石后休息。</p></li>
- </ol><button class="primary" data-close>准备好了 ↗</button>
-</dialog>
-<dialog id="journal-dialog">
- <button class="close" data-close aria-label="关闭">×</button><h2>海洋手记</h2>
- <div class="journal-cards">
-  <article><h3>油污</h3><p>羽毛沾上油，防水和保温能力会下降。</p></article>
-  <article><h3>漂浮塑料</h3><p>风和洋流会把塑料带到偏远的海岸。</p></article>
-  <article><h3>废弃渔网</h3><p>遗落海中的渔具会缠住海鸟和其他动物。</p></article>
-  <article><h3>游客登陆</h3><p>企鹅每天往返海边和巢区。游客应留出通道。</p></article>
- </div>
- <p class="source-links"><a href="https://www.antarctica.gov.au/about-antarctica/environment/pollution-and-waste/pollution/" target="_blank" rel="noopener noreferrer">南大洋污染 ↗</a> · <a href="https://www.ats.aq/devAS/e/Ats/Guideline/b509e543-a156-4ac7-a824-c2503b2a3d85" target="_blank" rel="noopener noreferrer">南极访客指南 ↗</a></p>
-</dialog>
-<dialog id="board-dialog"><button class="close" data-close aria-label="关闭">×</button><h2>本机排行榜</h2><p id="profile-summary" class="board-note"></p><div id="board-tabs" class="board-tabs"><button data-board="easy">低难度</button><button data-board="normal">中难度</button><button data-board="hard">高难度</button></div><div id="board-content"></div><button id="board-version" class="secondary hidden">查看旧版成绩</button><h3 class="small-heading">旅途勋章</h3><div id="achievements" class="achievements"></div></dialog>
-<dialog id="settings-dialog"><button class="close" data-close aria-label="关闭">×</button><div class="eyebrow">MAKE YOURSELF AT HOME</div><h2>按你的节奏出发。</h2><label class="setting-row">语言<select id="setting-language"><option value="zh">中文</option><option value="en">English</option></select></label><label class="setting-row">环境音与音乐<input id="setting-sound" type="checkbox"></label><label class="setting-row">音量<input id="setting-volume" type="range" min="0" max="100" value="45"></label><label class="setting-row">画面质量<select id="setting-quality"><option value="high">精细 · 更清晰的阴影</option><option value="medium">均衡 · 推荐</option><option value="low">流畅 · 适合较慢设备</option></select></label><label class="setting-row">减少动态效果<input id="setting-motion" type="checkbox"></label><p class="science-note">设置与旅程记录保存在本机。若浏览器禁止储存，游戏仍可继续，但关闭页面后无法续玩。想了解玩法，可从首页或暂停菜单打开出发指南。</p><button class="primary" data-close>保存并返回 ↗</button></dialog>
-<dialog id="pause-dialog"><div class="eyebrow">TAKE A BREATH</div><h2>在这里歇一会儿。</h2><p id="pause-copy">旅程已暂停，体温和体力不会流失。</p><button id="resume" class="primary">继续归途 ↗</button><div class="pause-links"><button id="pause-help">出发指南</button><button id="pause-settings">设置</button><button id="pause-view" class="normal-only" type="button">第一人称</button></div><button id="quit" class="secondary">保存旅程，返回首页</button></dialog>
-<dialog id="replace-dialog"><div class="eyebrow">A NEW JOURNEY</div><h2>重新出发？</h2><p>已有一段尚未完成的旅程。开启新旅程会替换本机续玩记录，已经完成的成绩与勋章会保留。</p><button id="confirm-start" class="primary">开启新旅程 ↗</button><button class="secondary" data-close>保留原旅程</button></dialog>
-<dialog id="result-dialog"><div class="eyebrow" id="result-eyebrow"></div><h2 id="result-title"></h2><p id="result-copy"></p><div class="result-stats"><div><b id="result-food">0</b><span id="result-food-label">带回的鱼</span></div><div><b id="result-time">0:00</b><span>旅途用时</span></div><div><b id="result-oil">0%</b><span>最高沾油</span></div></div><div class="journey-impact"><p id="impact-copy"></p><div><span id="impact-energy"></span><span id="impact-fish"></span></div></div><div id="earned" class="earned"></div><p id="save-status" class="board-note"></p><section id="booth-result" class="booth-only booth-result"><div class="booth-result-meta"><span id="booth-result-number"></span><b id="booth-result-rank"></b></div><p id="booth-return-countdown" class="booth-return-countdown" role="status"></p><div class="booth-result-actions"><button id="booth-next" class="primary">下一位开始 ↗</button><button id="booth-more-time" class="secondary">再看一会</button></div></section><button id="again" class="primary">再走一程 ↗</button><button id="home" class="secondary">返回首页</button></dialog>
-
-<dialog id="booth-idle-dialog" class="booth-dialog"><div class="eyebrow">PAUSED / 暂停</div><h2>要继续玩吗？</h2><p>暂时没有操作，游戏已暂停。继续玩就点下方按钮。</p><p id="booth-idle-countdown" class="booth-idle-countdown" role="status"></p><button id="booth-idle-continue" class="primary">继续玩 ↗</button><button id="booth-idle-home" class="secondary">留给下一位</button></dialog>
-<dialog id="booth-staff-dialog" class="booth-staff-dialog"><button class="close" data-close aria-label="关闭">×</button><div class="eyebrow">BOOTH / 工作人员</div><h2>摊位设置</h2><p class="board-note">调整后从下一局开始生效。记录只保存在当前浏览器。</p><div class="booth-staff-grid"><section><label class="setting-row">挑战难度<select id="booth-difficulty"><option value="easy">低</option><option value="normal" selected>中</option><option value="hard">高</option></select></label><label class="setting-row">每局时间<select id="booth-duration"><option value="90">90 秒</option><option value="105" selected>105 秒</option><option value="120">120 秒</option></select></label><label class="setting-row">画面质量<select id="booth-quality"><option value="high">精细 · 更清晰的阴影</option><option value="medium" selected>均衡 · 推荐</option><option value="low">流畅 · 适合较慢设备</option></select></label><p class="science-note">每局重新练习，不接续上一位的进度。同难度、同时间的成绩放在一起比较。</p><button id="booth-reset-run" class="secondary booth-tool">结束当前游戏，回到首页</button><button id="booth-exit-normal" class="secondary booth-tool">切回普通模式</button></section><section><h3 class="small-heading">今天的记录</h3><p id="booth-today-summary" class="booth-today-summary"></p><div id="booth-today-board" class="booth-today-board"></div><div class="booth-staff-actions"><button id="booth-export" class="secondary booth-tool">导出今日记录</button><button id="booth-clear-request" class="secondary booth-tool">清空今日统计和排行</button></div><div id="booth-clear-confirm" class="booth-clear-confirm hidden"><p>清空今天的统计和排行？设置和玩家编号会保留。</p><button id="booth-clear-yes" class="booth-danger">确认清空</button><button id="booth-clear-no" class="booth-cancel">取消</button></div></section></div><button class="primary" data-close>完成 ↗</button></dialog>
-<div id="error" class="error hidden" role="alert"><h2>画面暂时无法启动</h2><p>请使用支持 WebGL 的新版 Edge 或 Chrome，开启硬件加速后重试。</p><button onclick="location.reload()">重新加载</button></div>
-<script type="module" src="./game.js"></script>
-</body></html>
+  <p><a href="./?mode=booth&amp;lang=zh">打开《企鹅：归巢之路》</a></p>
+</body>
+</html>

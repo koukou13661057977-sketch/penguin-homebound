@@ -4,11 +4,21 @@
 <body>
 <canvas id="world" aria-label="企鹅归巢之路三维游戏场景"></canvas><div class="vignette"></div>
 <header class="brand"><span class="brand-mark">◈</span><span>蓝色星球计划<small>BLUE PLANET / FIELD NOTES 02</small></span></header>
-<div class="top-actions"><button id="booth-mode" class="icon-button">摊位模式</button><button id="language" class="icon-button" aria-label="切换语言">EN</button><button id="sound" class="icon-button" aria-pressed="false">声音：关</button><button id="fullscreen" class="icon-button">全屏</button><button id="pause" class="icon-button hidden">暂停 <kbd>P</kbd></button></div>
+<div class="top-actions"><button id="language" class="icon-button" aria-label="切换语言">EN</button><button id="sound" class="icon-button" aria-pressed="false">声音：关</button><button id="fullscreen" class="icon-button">全屏</button><button id="pause" class="icon-button hidden">暂停 <kbd>P</kbd></button></div>
 <main id="intro" class="intro">
  <p id="booth-banner" class="booth-only booth-banner">摊位体验 · 每局约两分钟</p>
  <h1>企鹅<span>归巢之路<span class="orange-dot">。</span></span></h1>
  <p class="intro-copy">幼鸟在等你。穿过漏油海峡，带 4 条鱼回巢。</p>
+ <div class="play-options">
+  <fieldset id="mode-select" class="play-choice">
+   <legend>游戏模式</legend>
+   <div><button type="button" data-mode="normal" aria-pressed="true">普通</button><button type="button" data-mode="booth" aria-pressed="false">摊位</button></div>
+  </fieldset>
+  <fieldset id="view-select" class="play-choice">
+   <legend>视角</legend>
+   <div><button type="button" data-view="overhead" aria-pressed="true">俯视</button><button type="button" data-view="first" aria-pressed="false">第一人称</button></div>
+  </fieldset>
+ </div>
  <fieldset id="species-select" class="species-select">
   <legend>你的旅伴</legend>
   <div>
@@ -25,14 +35,10 @@
    <button type="button" data-difficulty="hard" aria-pressed="false">高</button>
   </div>
  </fieldset>
- <fieldset id="view-select" class="view-select">
-  <legend>视角</legend>
-  <div class="view-options"><button type="button" data-view="overhead" aria-pressed="true">俯视</button><button type="button" data-view="first" aria-pressed="false">第一人称</button></div>
- </fieldset>
  <button id="continue" class="primary continue hidden">继续上次旅程 <span>↗</span></button><button id="start" class="primary">开启归巢之旅 <span>↗</span></button>
  <div class="intro-links"><button id="show-help">出发指南</button><button id="show-journal">海洋手记</button><button id="show-board">旅程记录</button><button id="show-settings">设置</button></div>
  <button id="booth-staff" class="booth-only booth-staff-link">工作人员</button>
- <p id="save-note" class="prototype">本机自动保存 · 1.10</p>
+ <p id="save-note" class="prototype">本机自动保存 · 1.11</p>
 </main>
 <div id="scene-caption" class="scene-caption"><p>冰湾 → 觅食湾 → 漏油海峡 → 登陆口 → 归巢</p><div class="caption-line"></div></div>
 <section id="hud" class="hud hidden" aria-label="游戏状态">

@@ -8,8 +8,6 @@
 
 /* Booth layout: short instructions, a readable timer and independent players. */
 .booth-only{display:none}
-#booth-mode{position:fixed;right:24px;bottom:18px;font-size:11px;z-index:4}
-body.playing #booth-mode,body.booth #booth-mode{display:none}
 body.booth .booth-only{display:block}
 body.booth .intro{width:470px;max-height:calc(100dvh - 130px);transform:translateY(-43%)}
 body.booth #continue,body.booth .intro .intro-copy,body.booth #save-note,body.booth #show-journal,body.booth #show-settings{display:none!important}
@@ -108,8 +106,6 @@ body.booth .journey-impact p{font-size:13px}
  body.booth .tutorial{bottom:135px}
 }
 @media(max-width:560px){
- #booth-mode{right:12px;bottom:6px;font-size:9px;padding:5px 9px}
- body:not(.playing):not(.booth) #booth-mode{bottom:auto;top:57px}
  body.booth .intro{top:auto;bottom:28px;width:86%;max-height:calc(100dvh - 90px);transform:none}
  body.booth .intro h1{font-size:43px}
  body.booth .intro h1>span{font-size:34px}
@@ -283,34 +279,44 @@ body.booth .intro {
  }
 }
 
-.view-select {
+.play-options {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr);
+ gap: 10px;
+ max-width: 335px;
+ margin-bottom: 15px;
+}
+body.booth .play-options { max-width: 355px }
+.play-choice {
  min-inline-size: 0;
  padding: 0;
- margin: 0 0 15px;
+ margin: 0;
  border: 0;
 }
-.view-select legend {
+.play-choice legend {
  padding: 0;
  margin-bottom: 6px;
  color: var(--muted);
  font-size: 11px;
 }
-.view-options {
- display: inline-flex;
+.play-choice > div {
+ display: flex;
  gap: 3px;
  padding: 3px;
  border: 1px solid var(--line);
  border-radius: 8px;
  background: #f3faf4d9;
 }
-.view-options button {
+.play-choice button {
+ flex: 1;
+ min-width: 0;
  min-height: 35px;
- padding: 5px 14px;
+ padding: 5px 4px;
  border-radius: 5px;
  background: transparent;
  font-size: 12px;
 }
-.view-options button[aria-pressed="true"] {
+.play-choice button[aria-pressed="true"] {
  background: var(--ink);
  color: white;
 }
@@ -332,7 +338,7 @@ body.playing.first-person:not(.booth) .hud:has(.tutorial:not(.hidden)) #view-hin
 }
 
 @media (max-width: 560px), (hover: none), (pointer: coarse) {
- .view-options button { min-height: 42px }
+ .play-choice button { min-height: 42px }
  body.playing.first-person #view-hint {
   position: absolute;
   right: 0;
@@ -348,7 +354,7 @@ body.playing.first-person:not(.booth) .hud:has(.tutorial:not(.hidden)) #view-hin
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
- body.booth .intro .view-select { grid-column: 2; grid-row: 3; margin: 0; align-self: center }
+ body.booth .intro .play-options { grid-column: 2; grid-row: 3; margin: 0; max-width: none; align-self: center }
  body.playing.first-person .hud:has(.context-hint.visible) #view-hint { display: none }
 }
 

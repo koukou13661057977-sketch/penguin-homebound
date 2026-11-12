@@ -14,8 +14,10 @@ import {
 const cache=new Map();
 const $=id=>{if(!cache.has(id))cache.set(id,document.getElementById(id));return cache.get(id);};
 const profile=createProfile(),audio=createAudio(),booth=createBooth();
-initLanguage(profile.data.settings.language);
-let boothMode=document.documentElement.dataset?.booth==='true';
+const entryParams=new URLSearchParams(globalThis.location?.search);
+const entryLanguage=entryParams.get('lang');
+initLanguage(entryLanguage==='en'||entryLanguage==='zh'?entryLanguage:profile.data.settings.language);
+let boothMode=entryParams.get('mode')==='booth';
 const activeWorld=()=>getWorld(boothMode?'booth':'normal');
 let settings={...profile.data.settings},difficulty=boothMode?booth.data.settings.difficulty:'normal',state=createRun(difficulty,{species:settings.species,mode:boothMode?'booth':'normal'});
 let mode='intro',paused=false,scene,last=0,hudClock=0,saveClock=0,lastFood=0,lastStage=0,lastMessage='',lastWind=false,toastUntil=0,returnToPause=false,tutorial=false;
@@ -66,6 +68,16 @@ function selectedSpecies(){
  if(!boothMode)return settings.species;
  return boothSpecies??boothSpeciesOrder[booth.getSummary().participants%boothSpeciesOrder.length];
 }
+function updateEntryParam(name,value){
+ if(!entryParams.has(name)||!globalThis.history?.replaceState)return;
+ try{
+  const url=new URL(globalThis.location.href);
+  url.searchParams.set(name,value);
+  globalThis.history.replaceState(globalThis.history.state,'',url);
+ }catch{
+  // Local HTML files can still switch settings when URL changes are restricted.
+ }
+}
 function toast(message,seconds=4){lastToast=message;text('toast',message);toastUntil=performance.now()+seconds*1000;$('toast').classList.add('visible');}
 function safeRestore(snapshot){try{return restoreRun(snapshot);}catch{return null;}}
 function checkpoint(){
@@ -76,7 +88,7 @@ function checkpoint(){
 function refreshMenu(){
  const saved=boothMode?null:safeRestore(profile.getCheckpoint());$('continue').classList.toggle('hidden',!saved);
  if(saved){const chapter=WORLD.chapters[saved.stage];$('continue').innerHTML='';const label=document.createElement('span');label.textContent=tr(`继续 · ${chapter.title}`);const arrow=document.createElement('span');arrow.textContent='↗';$('continue').append(label,arrow);}
- text('save-note',profile.available?'本机自动保存 · 1.10':'此浏览器无法保存 · 当前页面仍可完整游玩');
+ text('save-note',profile.available?'本机自动保存 · 1.11':'此浏览器无法保存 · 当前页面仍可完整游玩');
  if(boothMode){text('save-note','每位玩家重新开始 · 今日成绩保存在本机');text('booth-banner',`摊位体验 · ${DIFFICULTIES[difficulty].label}难度 · ${booth.data.settings.duration} 秒`);}
  text('show-board',boothMode?'今日排行榜':'旅程记录');
  document.querySelectorAll('[data-difficulty]').forEach(b=>{const selected=b.dataset.difficulty===difficulty;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
@@ -327,11 +339,16 @@ function participantNumber(){return boothEntry?String(boothEntry.number).padStar
 function syncBoothLayout(){
  document.body.classList.toggle('booth',boothMode);text('quit',boothMode?'结束本局，返回开始页':'保存旅程，返回首页');
  text('dismiss-tutorial',boothMode?'明白了':'明白了 ×');$('booth-practice-progress').classList.toggle('hidden',!boothMode);$('booth-practice-hint').classList.toggle('hidden',!boothMode);$('booth-practice-skip').classList.toggle('hidden',!boothMode);
+ document.querySelectorAll('[data-mode]').forEach(button=>{
+  button.setAttribute('aria-pressed',String(button.dataset.mode===(boothMode?'booth':'normal')));
+ });
 }
 function setBoothMode(value){
+ if(value===boothMode)return;
  if(!boothMode&&mode==='playing')checkpoint();if(boothMode&&boothEntry)booth.abandonRun(boothEntry.runId);
  closeAll();mode='intro';boothMode=value;boothEntry=null;difficulty=boothMode?booth.data.settings.difficulty:'normal';syncBoothLayout();
  scene?.dispose();scene=createScene($('world'),{...settings,world:activeWorld()});home();applySettings();
+ updateEntryParam('mode',boothMode?'booth':'normal');
 }
 function prepareBoothRun(next){
  closeAll();clearInput();state=next;mode='playing';paused=false;resultView=null;lastFood=state.food;lastStage=state.stage;lastMessage=state.message;lastWind=false;last=performance.now();hudClock=saveClock=0;returnDeadline=idleDeadline=0;
@@ -409,7 +426,10 @@ function updateBoothLifecycle(now){
 function exportBoothRecords(){
  const blob=new Blob(['\uFEFF'+booth.exportCSV()],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`homebound-${booth.getSummary().date}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-$('booth-mode').onclick=()=>setBoothMode(true);$('booth-exit-normal').onclick=()=>setBoothMode(false);$('booth-staff').onclick=openStaff;
+document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{
+ if(mode==='intro')setBoothMode(button.dataset.mode==='booth');
+}));
+$('booth-exit-normal').onclick=()=>setBoothMode(false);$('booth-staff').onclick=openStaff;
 $('booth-interact').onclick=boothInteraction;$('booth-practice-skip').onclick=startBoothChallenge;
 $('booth-idle-continue').onclick=continueIdle;$('booth-idle-home').onclick=home;$('booth-next').onclick=home;
 $('booth-more-time').onclick=()=>{returnDeadline=Math.max(performance.now()+30000,returnDeadline+30000);};
@@ -422,6 +442,7 @@ $('booth-idle-dialog').addEventListener('cancel',e=>{e.preventDefault();continue
 addEventListener('pointerdown',markActivity);addEventListener('focus',markActivity);
 function changeLanguage(value){
  setLanguage(value);profile.saveSettings({language:getLanguage()});applyLanguage();applySettings();scene?.setLanguage?.(getLanguage());refreshMenu();
+ updateEntryParam('lang',getLanguage());
  if(mode!=='intro'){updateHud();text('autosave',profile.available?'已保存到本机':'当前浏览器无法保存');}if(lastToast)text('toast',lastToast);
  if(paused)text('pause-copy',boothMode?'已暂停。工作人员可以继续这局，或返回开始页。':profile.available?'旅程已暂停并保存，体温和体力不会流失。':'旅程已暂停。此浏览器暂不能保存，关闭页面会失去进度。');
  if(resultView&&mode==='result'){renderResult(resultView.result,resultView.recorded);if(state.won&&resultElapsed!==null)updateFeedingCount();}
