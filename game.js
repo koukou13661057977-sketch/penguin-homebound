@@ -3,7 +3,7 @@ import {createRun,step,eat,rescue,interact,scoreRun,serializeRun,restoreRun,DIFF
 import {WORLD,getWorld,laneAt} from './world.js';
 import {insideHazard} from './hazards.js';
 import {createProfile,ACHIEVEMENTS} from './profile.js?v=1.12.0';
-import {createAudio} from './audio.js';
+import {createAudio} from './audio.js?v=1.12.1';
 import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js?v=1.12.0';
 import {createBooth} from './booth.js';
 import {
