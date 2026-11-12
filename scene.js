@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { getWorld,laneAt,waterClearanceAt,FISH_CLEARANCE } from './world.js';
-import { tr, getLanguage } from './i18n.js';
+import { tr, getLanguage } from './i18n.js?v=1.12.0';
 import { CAMERA_OFFSET } from './controls.js';
 import { createPenguinFactory } from './penguin.js';
 import { createFieldWorkerFactory } from './field-worker.js';

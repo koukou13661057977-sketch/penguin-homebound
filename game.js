@@ -1,10 +1,10 @@
-import {createScene,HOME_FEEDING_MS,HOME_CELEBRATION_START,homeFeedingProgress} from './scene.js';
+import {createScene,HOME_FEEDING_MS,HOME_CELEBRATION_START,homeFeedingProgress} from './scene.js?v=1.12.0';
 import {createRun,step,eat,rescue,interact,scoreRun,serializeRun,restoreRun,DIFFICULTIES} from './rules.js';
 import {WORLD,getWorld,laneAt} from './world.js';
 import {insideHazard} from './hazards.js';
-import {createProfile,ACHIEVEMENTS} from './profile.js';
+import {createProfile,ACHIEVEMENTS} from './profile.js?v=1.12.0';
 import {createAudio} from './audio.js';
-import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js';
+import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js?v=1.12.0';
 import {createBooth} from './booth.js';
 import {
  screenToWorld,worldToScreenAxes,viewToWorld,worldToViewAxes,
