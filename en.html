@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-default-language="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#e7f2f3"><meta name="description" content="Find fish and return to your chicks through an oil-polluted coast. Five regions, three difficulty levels, and local saves."><title>Penguin: Homebound</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='.9em' font-size='54'%3E🐧%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="./style.css"></head>
+<body>
+<canvas id="world" aria-label="Penguin: Homebound 3D game scene"></canvas><div class="vignette"></div>
+<header class="brand"><span class="brand-mark">◈</span><span>Blue Planet Games<small>BLUE PLANET / FIELD NOTES 02</small></span></header>
+<div class="top-actions"><button id="booth-mode" class="icon-button">Booth mode</button><button id="language" class="icon-button" aria-label="Switch language">EN</button><button id="sound" class="icon-button" aria-pressed="false">Sound: off</button><button id="fullscreen" class="icon-button">Full screen</button><button id="pause" class="icon-button hidden">Pause <kbd>P</kbd></button></div>
+<main id="intro" class="intro">
+ <p id="booth-banner" class="booth-only booth-banner">Booth challenge · About two minutes</p>
+ <h1>Penguin<span>Homebound<span class="orange-dot">.</span></span></h1>
+ <p class="intro-copy">Your chicks are waiting. Cross the oil channel and bring home 4 fish.</p>
+ <fieldset id="species-select" class="species-select">
+  <legend>Choose a penguin</legend>
+  <div>
+   <button type="button" data-species="gentoo" aria-pressed="true" class="selected">Gentoo</button>
+   <button type="button" data-species="adelie" aria-pressed="false">Adélie</button>
+   <button type="button" data-species="chinstrap" aria-pressed="false">Chinstrap</button>
+  </div>
+ </fieldset>
+ <fieldset class="difficulty">
+  <legend>Difficulty</legend>
+  <div class="difficulty-options">
+   <button type="button" data-difficulty="easy" aria-pressed="false">Easy</button>
+   <button type="button" data-difficulty="normal" class="selected" aria-pressed="true">Normal</button>
+   <button type="button" data-difficulty="hard" aria-pressed="false">Hard</button>
+  </div>
+ </fieldset>
+ <fieldset id="view-select" class="view-select">
+  <legend>View</legend>
+  <div class="view-options"><button type="button" data-view="overhead" aria-pressed="true">Overhead</button><button type="button" data-view="first" aria-pressed="false">First person</button></div>
+ </fieldset>
+ <button id="continue" class="primary continue hidden">Continue <span>↗</span></button><button id="start" class="primary">Start game <span>↗</span></button>
+ <div class="intro-links"><button id="show-help">How to play</button><button id="show-journal">Ocean notes</button><button id="show-board">Records</button><button id="show-settings">Settings</button></div>
+ <button id="booth-staff" class="booth-only booth-staff-link">Staff</button>
+ <p id="save-note" class="prototype">Local autosave · 1.10</p>
+</main>
+<div id="scene-caption" class="scene-caption"><p>Ice Bay → Drift Bay → Oil Channel → Landing → Home</p><div class="caption-line"></div></div>
+<section id="hud" class="hud hidden" aria-label="Game status">
+ <div id="booth-hud" class="booth-only booth-hud" aria-label="Booth challenge status"><div><span>Time left</span><b id="booth-countdown">01:45</b></div><div><span>Fish for the chicks</span><b id="booth-food">0 / 4</b></div><div class="booth-player"><span>Player</span><b id="booth-number">0001</b></div></div>
+ <div class="chapter"><span id="chapter-index">01 / THE FIRST STEP</span><h2 id="chapter-name">Ice bay</h2><p id="chapter-description"></p><div class="environment-card"><div class="environment-title"><span id="environment-label"></span><b id="environment-value"></b></div><p id="environment-detail"></p><div class="environment-strip"><i id="environment-progress"></i></div><div class="current-note" id="current-note"></div></div><div class="mission-checklist"><span id="mission-food">○ Keep 4 fish for the chicks</span><span id="mission-signal">○ Report stranded penguins (optional)</span></div></div>
+ <div class="status-card"><div class="stat" id="temperature-stat"><span><span id="temperature-label">Warmth</span><small id="temperature-state" aria-live="polite"></small><b id="temperature-text">100</b></span><meter id="temperature" aria-labelledby="temperature-label" min="0" max="100" value="100"></meter></div><div class="stat"><span>Energy <b id="energy-text">100</b></span><meter id="energy" min="0" max="100" value="100"></meter></div><div class="stat oil-stat"><span>Oil on feathers <b id="oil-text">0%</b></span><meter id="oil" min="0" max="100" value="0"></meter></div><div class="insulation-note"><span>Insulation</span><b id="insulation">100%</b></div><div class="food-stat"><span>Fish carried <b><span id="food">0</span><small> / <span id="capacity">10</span></b></span><small>Keep at least <span id="required-food">4</span> for the chicks</small></div></div>
+ <div class="route-card"><div><span id="terrain">Ice · Walking</span><span id="time">00:00</span></div><canvas id="route-map" width="190" height="130" aria-label="Map ahead: white ice, dark oil, grey rocks, gold fish, orange rescue camps, green penguin markers"></canvas><div class="map-legend"><span>● You</span><span>● Fish</span><span>+ Camp</span></div><div class="route-track"><i id="route-progress"></i><span></span><span></span></div><div class="route-labels"><span>Start</span><span id="distance">Distance home</span><span>Home ⚑</span></div></div>
+ <div id="context-panel" class="context-hint"><span id="context-hint" role="status"></span><progress id="context-progress" class="hidden" max="1" value="0" aria-label="Escape progress"></progress></div><div id="toast" class="toast" role="status"></div>
+ <div id="tutorial" class="tutorial hidden"><span>First time? You can open the controls from the pause menu.</span><p id="tutorial-copy"></p><button id="dismiss-tutorial">Got it ×</button><div class="booth-only booth-practice"><progress id="booth-practice-progress" max="10" value="0" aria-label="Practice progress"></progress><p id="booth-practice-hint">Try moving around. Swim close to a golden fish to catch it.</p><button id="booth-practice-skip" class="primary" disabled>Start challenge ↗</button></div></div>
+ <div id="treatment" class="treatment hidden" role="status"><h3 id="treatment-stage">Cleaning feathers</h3><progress id="treatment-progress" max="1" value="0" aria-label="Treatment progress"></progress></div>
+ <div class="controls-dock"><span><kbd>W A S D</kbd> Move</span><span id="view-hint"><span class="view-hint-keys">← / → Turn</span><span class="view-hint-touch">Drag the right side to look</span></span><button id="slide"><kbd>Space</kbd> Slide</button><button id="eat"><kbd>E</kbd> Eat fish</button><button id="rescue"><kbd>R</kbd> Clean</button><button id="signal"><kbd>F</kbd> Call rescue</button><button id="booth-interact" class="booth-only"><kbd>R</kbd> Interact</button></div>
+ <div class="touch-pad" aria-label="Touch movement controls"><button data-move="up" aria-label="Up">↑</button><button data-move="left" aria-label="Left">←</button><button data-move="down" aria-label="Down">↓</button><button data-move="right" aria-label="Right">→</button></div>
+ <span id="autosave" class="autosave">Autosaved on this device</span>
+</section>
+<p id="home-feeding" class="home-feeding hidden"></p>
+<dialog id="help-dialog">
+ <button class="close" data-close aria-label="Close">×</button><h2>How to play</h2>
+ <ol class="guide coast-guide">
+  <li><b>Move</b><p>Use WASD, arrow keys or the touch arrows. Hold Space to slide on ice.</p><p>In first person, use WASD to move and ← or → to turn. On touchscreens, drag the right side to look.</p></li>
+  <li><b>Catch fish</b><p>Swim close to golden fish to catch them. Press E or tap Eat to recover energy. Keep 4 for the chicks.</p></li>
+  <li><b>Plastic and nets</b><p>Follow the fish as plastic drifts in. Floats mark nets. If you get snagged, hold the direction shown to back out.</p></li>
+  <li><b>Landing and rescue</b><p>Wait for the guide before landing. Use the action button at orange camps and near stranded penguins.</p></li>
+  <li><b>Snow and wind</b><p>Oil makes you lose warmth. Check your temperature before the ridge and shelter behind rocks in gusts.</p></li>
+ </ol><button class="primary" data-close>Got it ↗</button>
+</dialog>
+<dialog id="journal-dialog">
+ <button class="close" data-close aria-label="Close">×</button><h2>Ocean notes</h2>
+ <div class="journal-cards">
+  <article><h3>Oil</h3><p>Oil makes feathers less waterproof and less insulating.</p></article>
+  <article><h3>Drifting plastic</h3><p>Winds and currents carry plastic to remote shores.</p></article>
+  <article><h3>Discarded net</h3><p>Lost fishing gear can entangle seabirds and other animals.</p></article>
+  <article><h3>Visitors ashore</h3><p>Penguins travel between the sea and their nests. Visitors should leave the path clear.</p></article>
+ </div>
+ <p class="source-links"><a href="https://www.antarctica.gov.au/about-antarctica/environment/pollution-and-waste/pollution/" target="_blank" rel="noopener noreferrer">Southern Ocean pollution ↗</a> · <a href="https://www.ats.aq/devAS/e/Ats/Guideline/b509e543-a156-4ac7-a824-c2503b2a3d85" target="_blank" rel="noopener noreferrer">Antarctic visitor guidelines ↗</a></p>
+</dialog>
+<dialog id="board-dialog"><button class="close" data-close aria-label="Close">×</button><h2>Local leaderboard</h2><p id="profile-summary" class="board-note"></p><div id="board-tabs" class="board-tabs"><button data-board="easy">Easy</button><button data-board="normal">Normal</button><button data-board="hard">Hard</button></div><div id="board-content"></div><button id="board-version" class="secondary hidden">View earlier scores</button><h3 class="small-heading">Achievements</h3><div id="achievements" class="achievements"></div></dialog>
+<dialog id="settings-dialog"><button class="close" data-close aria-label="Close">×</button><div class="eyebrow">SETTINGS</div><h2>Settings</h2><label class="setting-row">Language<select id="setting-language"><option value="zh">中文</option><option value="en">English</option></select></label><label class="setting-row">Sound and music<input id="setting-sound" type="checkbox"></label><label class="setting-row">Volume<input id="setting-volume" type="range" min="0" max="100" value="45"></label><label class="setting-row">Graphics<select id="setting-quality"><option value="high">High · Sharper shadows</option><option value="medium">Medium · Recommended</option><option value="low">Low · Better performance</option></select></label><label class="setting-row">Reduce motion<input id="setting-motion" type="checkbox"></label><p class="science-note">Settings and records stay in this browser. If storage is blocked, you can still play, but progress will be lost when you close the page. Open How to play from the title screen or pause menu.</p><button class="primary" data-close>Done ↗</button></dialog>
+<dialog id="pause-dialog"><div class="eyebrow">PAUSED</div><h2>Paused</h2><p id="pause-copy">Warmth and energy will not drain while paused.</p><button id="resume" class="primary">Resume ↗</button><div class="pause-links"><button id="pause-help">How to play</button><button id="pause-settings">Settings</button><button id="pause-view" class="normal-only" type="button">First person</button></div><button id="quit" class="secondary">Save and return to title</button></dialog>
+<dialog id="replace-dialog"><div class="eyebrow">NEW GAME</div><h2>Start a new game?</h2><p>Starting a new game replaces your current save. Completed records and achievements will stay.</p><button id="confirm-start" class="primary">Start new game ↗</button><button class="secondary" data-close>Keep current save</button></dialog>
+<dialog id="result-dialog"><div class="eyebrow" id="result-eyebrow"></div><h2 id="result-title"></h2><p id="result-copy"></p><div class="result-stats"><div><b id="result-food">0</b><span id="result-food-label">Fish delivered</span></div><div><b id="result-time">0:00</b><span>Time</span></div><div><b id="result-oil">0%</b><span>Peak oil</span></div></div><div class="journey-impact"><p id="impact-copy"></p><div><span id="impact-energy"></span><span id="impact-fish"></span></div></div><div id="earned" class="earned"></div><p id="save-status" class="board-note"></p><section id="booth-result" class="booth-only booth-result"><div class="booth-result-meta"><span id="booth-result-number"></span><b id="booth-result-rank"></b></div><p id="booth-return-countdown" class="booth-return-countdown" role="status"></p><div class="booth-result-actions"><button id="booth-next" class="primary">Next player ↗</button><button id="booth-more-time" class="secondary">More time</button></div></section><button id="again" class="primary">Play again ↗</button><button id="home" class="secondary">Return to title</button></dialog>
+
+<dialog id="booth-idle-dialog" class="booth-dialog"><div class="eyebrow">PAUSED</div><h2>Still playing?</h2><p>No input was detected, so the game is paused. Tap below to keep playing.</p><p id="booth-idle-countdown" class="booth-idle-countdown" role="status"></p><button id="booth-idle-continue" class="primary">Keep playing ↗</button><button id="booth-idle-home" class="secondary">Next player</button></dialog>
+<dialog id="booth-staff-dialog" class="booth-staff-dialog"><button class="close" data-close aria-label="Close">×</button><div class="eyebrow">BOOTH / STAFF</div><h2>Booth settings</h2><p class="board-note">The default difficulty and time limit apply to the next game. Players can choose their difficulty at the start.</p><div class="booth-staff-grid"><section><label class="setting-row">Default difficulty<select id="booth-difficulty"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></label><label class="setting-row">Time per game<select id="booth-duration"><option value="90">90 seconds</option><option value="105" selected>105 seconds</option><option value="120">120 seconds</option></select></label><label class="setting-row">Graphics<select id="booth-quality"><option value="high">High · Sharper shadows</option><option value="medium" selected>Medium · Recommended</option><option value="low">Low · Better performance</option></select></label><p class="science-note">Every player gets a fresh game and a practice round. Only results with the same difficulty and time limit are compared.</p><button id="booth-reset-run" class="secondary booth-tool">End game and return to title</button><button id="booth-exit-normal" class="secondary booth-tool">Switch to regular mode</button></section><section><h3 class="small-heading">Today’s results</h3><p id="booth-today-summary" class="booth-today-summary"></p><div id="booth-today-board" class="booth-today-board"></div><div class="booth-staff-actions"><button id="booth-export" class="secondary booth-tool">Export today’s results</button><button id="booth-clear-request" class="secondary booth-tool">Clear today’s stats and scores</button></div><div id="booth-clear-confirm" class="booth-clear-confirm hidden"><p>End the current game and clear today’s stats and scores? Settings and numbering will stay.</p><button id="booth-clear-yes" class="booth-danger">Clear results</button><button id="booth-clear-no" class="booth-cancel">Cancel</button></div></section></div><button class="primary" data-close>Done ↗</button></dialog>
+<div id="error" class="error hidden" role="alert"><h2>The 3D scene could not start</h2><p>Try a current version of Edge or Chrome with hardware acceleration enabled.</p><button onclick="location.reload()">Reload</button></div>
+<script type="module" src="./game.js"></script>
+</body></html>
