@@ -22,7 +22,7 @@ function settingsFrom(input,base=DEFAULT_SETTINGS){
   if(typeof input.volume==='number'&&Number.isFinite(input.volume))out.volume=Math.min(1,Math.max(0,input.volume));
   if(['high','medium','low'].includes(input.quality))out.quality=input.quality;
   if(['gentoo','adelie','chinstrap'].includes(input.species))out.species=input.species;
-  if(['zh','en'].includes(input.language))out.language=input.language;
+  if(['zh','zh-Hant','en'].includes(input.language))out.language=input.language;
   return out;
 }
 function validRecord(r){

@@ -425,3 +425,6 @@ body.booth .species-select { max-width: 355px }
 #temperature-state { font-size: 9px; font-weight: 700; white-space: nowrap }
 #temperature::-webkit-meter-optimum-value { background: var(--temperature-color) }
 #temperature::-moz-meter-bar { background: var(--temperature-color) }
+
+.language-picker { font-family: inherit; color: inherit; cursor: pointer }
+.language-picker:focus-visible { outline: 3px solid #db5d34; outline-offset: 4px }

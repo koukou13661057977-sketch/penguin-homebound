@@ -4,7 +4,7 @@ import {WORLD,getWorld,laneAt} from './world.js';
 import {insideHazard} from './hazards.js';
 import {createProfile,ACHIEVEMENTS} from './profile.js';
 import {createAudio} from './audio.js';
-import {tr,getLanguage,setLanguage,initLanguage,applyLanguage} from './i18n.js';
+import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js';
 import {createBooth} from './booth.js';
 import {
  screenToWorld,worldToScreenAxes,viewToWorld,worldToViewAxes,
@@ -16,13 +16,15 @@ const $=id=>{if(!cache.has(id))cache.set(id,document.getElementById(id));return 
 const profile=createProfile(),audio=createAudio(),booth=createBooth();
 const entryParams=new URLSearchParams(globalThis.location?.search);
 const entryLanguage=entryParams.get('lang');
-initLanguage(entryLanguage==='en'||entryLanguage==='zh'?entryLanguage:profile.data.settings.language);
+const DEFAULT_VIEW='first';
+const DATE_LOCALES={en:'en-GB',zh:'zh-CN','zh-Hant':'zh-HK'};
+initLanguage(GAME_LANGUAGES.includes(entryLanguage)?entryLanguage:profile.data.settings.language,document);
 let boothMode=entryParams.get('mode')==='booth';
 const activeWorld=()=>getWorld(boothMode?'booth':'normal');
-let settings={...profile.data.settings},difficulty=boothMode?booth.data.settings.difficulty:'normal',state=createRun(difficulty,{species:settings.species,mode:boothMode?'booth':'normal'});
+let settings={...profile.data.settings},difficulty=boothMode?booth.data.settings.difficulty:'normal',state=createRun(difficulty,{species:settings.species,mode:boothMode?'booth':'normal',view:DEFAULT_VIEW});
 let mode='intro',paused=false,scene,last=0,hudClock=0,saveClock=0,lastFood=0,lastStage=0,lastMessage='',lastWind=false,toastUntil=0,returnToPause=false,tutorial=false;
 const keys=new Set(),touch=new Set();let slideHeld=false;
-let menuView='overhead',lookDrag=null;
+let menuView=DEFAULT_VIEW,lookDrag=null;
 let resultView=null,resultElapsed=null,lastToast='';
 let boothEntry=null,boothPhase='ready',practiceTime=0,practiceMoved=false,practiceCaught=false,practiceStart={x:0,z:5},lastActivity=0,idleDeadline=0,idleWasPaused=false,returnDeadline=0;
 const boothSpeciesOrder=['gentoo','adelie','chinstrap'];
@@ -88,7 +90,7 @@ function checkpoint(){
 function refreshMenu(){
  const saved=boothMode?null:safeRestore(profile.getCheckpoint());$('continue').classList.toggle('hidden',!saved);
  if(saved){const chapter=WORLD.chapters[saved.stage];$('continue').innerHTML='';const label=document.createElement('span');label.textContent=tr(`继续 · ${chapter.title}`);const arrow=document.createElement('span');arrow.textContent='↗';$('continue').append(label,arrow);}
- text('save-note',profile.available?'本机自动保存 · 1.11':'此浏览器无法保存 · 当前页面仍可完整游玩');
+ text('save-note',profile.available?'本机自动保存 · 1.12':'此浏览器无法保存 · 当前页面仍可完整游玩');
  if(boothMode){text('save-note','每位玩家重新开始 · 今日成绩保存在本机');text('booth-banner',`摊位体验 · ${DIFFICULTIES[difficulty].label}难度 · ${booth.data.settings.duration} 秒`);}
  text('show-board',boothMode?'今日排行榜':'旅程记录');
  document.querySelectorAll('[data-difficulty]').forEach(b=>{const selected=b.dataset.difficulty===difficulty;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
@@ -123,8 +125,8 @@ function launch(saved=null){
 }
 function requestStart(){if(!boothMode&&safeRestore(profile.getCheckpoint()))$('replace-dialog').showModal();else launch();}
 function home(){
- boothSpecies=null;menuView='overhead';
- if(mode==='playing')checkpoint();if(boothMode&&boothEntry)booth.abandonRun(boothEntry.runId);boothEntry=null;boothPhase='ready';returnDeadline=idleDeadline=0;closeAll();clearInput();mode='intro';paused=false;if(boothMode)difficulty=booth.data.settings.difficulty;state=createRun(difficulty,{species:settings.species,mode:boothMode?'booth':'normal'});
+ boothSpecies=null;menuView=DEFAULT_VIEW;
+ if(mode==='playing')checkpoint();if(boothMode&&boothEntry)booth.abandonRun(boothEntry.runId);boothEntry=null;boothPhase='ready';returnDeadline=idleDeadline=0;closeAll();clearInput();mode='intro';paused=false;if(boothMode)difficulty=booth.data.settings.difficulty;state=createRun(difficulty,{species:settings.species,mode:boothMode?'booth':'normal',view:DEFAULT_VIEW});
  document.body.classList.remove('playing','polluted','cold','has-oil');$('intro').classList.remove('hidden');$('scene-caption').classList.remove('hidden');$('hud').classList.add('hidden');$('pause').classList.add('hidden');refreshMenu();
  $('booth-result').classList.add('hidden');$('booth-clear-confirm').classList.add('hidden');markActivity();
 }
@@ -274,7 +276,7 @@ function finish(){
  mode='result';clearInput();$('pause').classList.add('hidden');$('tutorial').classList.add('hidden');
  syncViewControls();
  $('context-panel').classList.remove('visible');$('toast').classList.remove('visible');$('treatment').classList.add('hidden');
- const won=state.status==='won',result={...scoreRun(state),runId:state.runId,date:new Date().toLocaleDateString(getLanguage()==='en'?'en-GB':'zh-CN')};state.won=won;
+ const won=state.status==='won',result={...scoreRun(state),runId:state.runId,date:new Date().toLocaleDateString(DATE_LOCALES[getLanguage()])};state.won=won;
  let recorded;if(boothMode){recorded=booth.recordRun({...result,...boothEntry});boothPhase='result';}else{profile.clearCheckpoint();recorded=profile.recordRun(result);}
  resultView={result,recorded};renderResult(result,recorded);
  resultElapsed=0;
@@ -449,7 +451,7 @@ function changeLanguage(value){
  if($('board-dialog').open){const selected=document.querySelector('[data-board][aria-pressed="true"]');showBoard(selected?.dataset.board||difficulty);}
  if($('booth-staff-dialog').open)refreshStaff();
 }
-$('language').onclick=()=>changeLanguage(getLanguage()==='en'?'zh':'en');
+$('language').onchange=()=>{changeLanguage($('language').value);if(mode==='playing'&&!paused)$('language').blur();};
 $('setting-language').onchange=()=>changeLanguage($('setting-language').value);
 
 $('start').onclick=requestStart;$('confirm-start').onclick=()=>{profile.clearCheckpoint();launch();};
@@ -515,6 +517,7 @@ addEventListener('keydown',e=>{
  markActivity();if(boothMode&&e.key.toLowerCase()==='f8'){e.preventDefault();openStaff();return;}
  const k=e.key.toLowerCase();if(mode!=='playing')return;
  if(paused){if((k==='p'||k==='escape')&&$('pause-dialog').open){e.preventDefault();resume();}return;}
+ if(e.target?.tagName==='SELECT')return;
  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(e.repeat)return;
  if(k==='p'||k==='escape'){e.preventDefault();pause();return;}keys.add(k);if(k==='e')action('eat');if(boothMode&&(k==='r'||k==='f'))boothInteraction();else{if(k==='r')action('rescue');if(k==='f')action('signal');}
 });

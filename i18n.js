@@ -5,6 +5,8 @@ import {BOOTH_COPY} from './copy-booth.js';
 import {COAST_COPY} from './copy-coast.js';
 
 let language='zh';
+export const GAME_LANGUAGES=Object.freeze(['zh','zh-Hant','en']);
+const LANGUAGE_TAGS={zh:'zh-Hans','zh-Hant':'zh-Hant',en:'en'};
 const entries=[...STATIC_COPY,...WORLD_COPY,...GAME_COPY,...BOOTH_COPY,...COAST_COPY];
 const exact=new Map(entries.map(row=>[row[0],row]));
 const sourceKeys=new Map(entries.map(row=>[row[0],row[0]]));
@@ -16,10 +18,10 @@ const templates=entries.filter(([source])=>/\{\d+\}/.test(source)).map(row=>{
  pattern+=escape(row[0].slice(last));return {row,ids,re:new RegExp('^'+pattern+'$','u'),weight:row[0].replace(/\{\d+\}/g,'').length};
 }).sort((a,b)=>b.weight-a.weight);
 export const getLanguage=()=>language;
-export function setLanguage(value){language=value==='en'?'en':'zh';return language;}
+export function setLanguage(value){language=GAME_LANGUAGES.includes(value)?value:'zh';return language;}
 export function tr(value,locale=language,depth=0){
  const source=String(value??'');if(!source||depth>8)return source;
- const index=locale==='en'?2:1,row=exact.get(source);if(row&&!/\{\d+\}/.test(source))return row[index];
+ const index=locale==='en'?2:locale==='zh-Hant'?3:1,row=exact.get(source);if(row&&!/\{\d+\}/.test(source))return row[index];
  for(const template of templates){const match=template.re.exec(source);if(!match)continue;const values={};template.ids.forEach((id,i)=>values[id]=match[i+1]);return template.row[index].replace(/\{(\d+)\}/g,(_,id)=>tr(values[id]??'',locale,depth+1));}
  return source;
 }
@@ -41,8 +43,8 @@ export function initLanguage(preferred='zh',doc=globalThis.document){
  applyLanguage();return language;
 }
 export function applyLanguage(){
- if(documentRef?.documentElement){documentRef.documentElement.lang=language==='en'?'en':'zh-Hans';documentRef.documentElement.setAttribute?.('data-language',language);}
+ if(documentRef?.documentElement){documentRef.documentElement.lang=LANGUAGE_TAGS[language];documentRef.documentElement.setAttribute?.('data-language',language);}
  for(const {node,source,trimmed,key}of staticNodes)if(node.isConnected!==false)node.nodeValue=source.replace(trimmed,()=>tr(key));
  for(const {element,name,source}of staticAttrs)element.setAttribute(name,tr(source));
- const button=documentRef?.getElementById?.('language');if(button){button.textContent=language==='en'?'中文':'EN';button.setAttribute('aria-label',language==='en'?'Switch to Chinese':'切换到英文');}
+ const picker=documentRef?.getElementById?.('language');if(picker)picker.value=language;
 }
