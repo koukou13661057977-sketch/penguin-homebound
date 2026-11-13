@@ -421,12 +421,21 @@ body.booth .species-select { max-width: 355px }
  body.booth .intro .species-select button::before { width: min(100%, 50px) }
 }
 
-.home-feeding {
+.homecoming-controls {
  position: fixed;
  z-index: 4;
- left: 50%;
+ left: 0;
+ right: 0;
  bottom: max(24px, env(safe-area-inset-bottom));
- transform: translateX(-50%);
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ gap: 8px;
+ padding-inline: 12px;
+ pointer-events: none;
+}
+.homecoming-controls.hidden { display: none }
+.home-feeding, .homecoming-controls button {
  margin: 0;
  padding: 9px 15px;
  border: 1px solid #fff4;
@@ -437,8 +446,9 @@ body.booth .species-select { max-width: 355px }
  font-weight: 600;
  font-variant-numeric: tabular-nums;
  white-space: nowrap;
- pointer-events: none;
 }
+.homecoming-controls button { min-height: 44px; pointer-events: auto }
+.homecoming-controls button:focus-visible { outline: 2px solid #fff; outline-offset: 2px }
 
 #temperature-stat { --temperature-color: var(--teal) }
 #temperature-stat[data-level="low"] { --temperature-color: #986016 }

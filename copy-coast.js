@@ -14,6 +14,7 @@ export const COAST_COPY = [
  ['本机自动保存 · 1.13','本机自动保存 · 1.13','Local autosave · 1.13', '本機自動保存 · 1.13'],
  ['冰湾 → 觅食湾 → 漏油海峡 → 登陆口 → 归巢','冰湾 → 觅食湾 → 漏油海峡 → 登陆口 → 归巢','Ice Bay → Drift Bay → Oil Channel → Landing → Home', '冰灣 → 覓食灣 → 漏油海峽 → 登陸口 → 歸巢'],
  ['喂鱼 {0} / {1}','喂鱼 {0} / {1}','Feeding {0} / {1}', '餵魚 {0} / {1}'],
+ ['查看成绩','查看成绩','View results','查看成績'],
  ['潮水','潮水','Tide', '潮水'],
  ['塑料漂近时，鱼群会向边缘散开。','塑料漂近时，鱼群会向边缘散开。','Fish scatter toward the edges as plastic drifts in.', '塑料漂近時，魚群會向邊緣散開。'],
  ['塑料漂过来了 · 看鱼群往哪游','塑料漂过来了 · 看鱼群往哪游','Plastic drifting in · Follow the fish', '塑料漂過來了 · 看魚群往哪游'],

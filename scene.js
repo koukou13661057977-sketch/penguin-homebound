@@ -1,17 +1,22 @@
 import * as THREE from './vendor/three.module.js';
 import { getWorld,laneAt,waterClearanceAt,FISH_CLEARANCE } from './world.js';
-import { tr, getLanguage } from './i18n.js?v=1.13.0';
+import { tr, getLanguage } from './i18n.js?v=1.13.1';
 import { CAMERA_OFFSET } from './controls.js';
 import { createPenguinFactory } from './penguin.js';
 import { createFieldWorkerFactory } from './field-worker.js';
 import { WATER_LEVEL,createWaterClipping,addPassageBanks,addHazardModels } from './hazard-scene.js';
 
 const PREVIEW_CAMERA_OFFSET=Object.freeze({x:25,y:33,z:-37});
-export const HOME_FEEDING_MS=8200;
-export const HOME_CELEBRATION_START=5.65;
-const HOME_APPROACH=1.25;
-const HOME_LAST_TRANSFER=5.5;
-const FISH_REACHES_CHICK=.76;
+export const HOME_FEEDING_MS=9200;
+export const HOME_CELEBRATION_START=6.45;
+const HOME_APPROACH=1.35;
+const HOME_LAST_TRANSFER=6.3;
+const FISH_LEAVES_PARENT=.18;
+const FISH_REACHES_CHICK=.79;
+const smooth=THREE.MathUtils.smoothstep;
+const lerp=THREE.MathUtils.lerp;
+const headingTo=(from,to)=>Math.atan2(to.x-from.x,to.z-from.z);
+const turnTo=(from,to,amount)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*amount;
 
 export function homeFeedingProgress(food,elapsedSeconds){
   const total=THREE.MathUtils.clamp(Number.isFinite(food)?Math.floor(food):0,0,10);
@@ -106,6 +111,7 @@ export function createScene(canvas, options = {}) {
   const hemisphere = new THREE.HemisphereLight('#e6f8ff', '#285567', 2.15);
   scene.add(hemisphere);
   const sun = new THREE.DirectionalLight('#fff0d6', 3.1);
+  const daylight=new THREE.Color('#fff0d6'),homeLight=new THREE.Color('#ffce95');
   sun.position.set(-25, 55, -35); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -28, right: 28, top: 32, bottom: -32, near: 1, far: 140 });
@@ -285,15 +291,23 @@ export function createScene(canvas, options = {}) {
   for(const [i,[x,z]]of positions.entries()){const g=chunk(z,5),p=penguin({scale:.68,species:penguinSpecies[i%penguinSpecies.length]});p.root.position.set(x,.31,z);p.root.rotation.y=.6+rand()*4;g.add(p.root);wildlife.push(p);}
   const goal=WORLD.goal;
   const home=chunk(goal.z,25),nest=new THREE.Group();nest.position.set(goal.x,.33,goal.z);home.add(nest);
-  for(let i=0;i<20;i++){const a=i/20*Math.PI*2;oval(m.rock,nest,Math.cos(a)*4.5,.12,Math.sin(a)*3.6,.6,.25,.45);}
+  disc(basic('#82a3a9',.2),nest,0,.005,0,4.4,3.48);
+  for(let i=0;i<24;i++){
+    const angle=i*Math.PI/12,spacing=.95+Math.sin(i*2.42)*.08;
+    const pebble=oval(i%5===0?m.side:m.rock,nest,Math.cos(angle)*4.5*spacing,.085,Math.sin(angle)*3.6*spacing,
+      .45+(i%4)*.065,.12+(i%3)*.055,.29+(i%5)*.038);
+    pebble.rotation.y=angle+Math.sin(i*1.51);
+  }
   const adultSpot=new THREE.Vector3(goal.x-1.65,.31,goal.z-.7);
-  const chicks=[penguin({chick:true,scale:.64}),penguin({chick:true,scale:.53})];
-  chicks[0].root.position.set(goal.x+1.48,.3,goal.z-1.4);
-  chicks[1].root.position.set(goal.x+2.45,.3,goal.z+1.5);
-  const chickFeedingHeadings=chicks.map(chick=>{
+  const chicks=[penguin({chick:true,scale:.72,quality:'medium'}),penguin({chick:true,scale:.61,quality:'medium'})];
+  const chickSpots=[new THREE.Vector3(goal.x+1.33,.31,goal.z-1.32),new THREE.Vector3(goal.x+2.03,.31,goal.z+1.25)];
+  const chickFeedingHeadings=chicks.map((chick,index)=>{
     home.add(chick.root);
-    return Math.atan2(adultSpot.x-chick.root.position.x,adultSpot.z-chick.root.position.z);
+    chick.root.position.copy(chickSpots[index]);
+    return headingTo(chickSpots[index],adultSpot);
   });
+  const adultFeedingHeadings=chickSpots.map(spot=>headingTo(adultSpot,spot));
+  const familyLook=new THREE.Vector3(goal.x+8,3.6,goal.z-9);
   const homeNeighbors=Array.from({length:4},(_,i)=>{
     const neighbor=penguin({scale:.75+rand()*.2,species:penguinSpecies[i%penguinSpecies.length]});
     neighbor.root.position.set(goal.x+(i<2?-1:1)*(7.4+rand()*2),.3,goal.z-3+rand()*14);
@@ -304,10 +318,9 @@ export function createScene(canvas, options = {}) {
   const nestLabel=label('你终于回来了','#ffdda7',10);nestLabel.position.set(goal.x,6,goal.z+4);home.add(nestLabel);
   const feedFish=makeFish();
   feedFish.userData.ring.visible=false;
-  feedFish.scale.setScalar(.62);
   feedFish.visible=false;
   home.add(feedFish);
-  const adultBill=new THREE.Vector3(),chickBill=new THREE.Vector3();
+  const adultBill=new THREE.Vector3(),chickBill=new THREE.Vector3(),fishDirection=new THREE.Vector3();
 
   const fishMeshes=new Map(),oilMeshes=[],rescueMeshes=[],shelterMeshes=[],signalMeshes=[];
   function makeFish(){
@@ -430,8 +443,9 @@ export function createScene(canvas, options = {}) {
   }
   const target=new THREE.Vector3(),desired=new THREE.Vector3(),targetColor=new THREE.Color();
   const eyeTarget=new THREE.Vector3(),eyeDirection=new THREE.Vector3(),labelPosition=new THREE.Vector3();
+  const homeOpeningPosition=new THREE.Vector3(),homeOpeningTarget=new THREE.Vector3();
   let t=0,wonTime=0,previousZ=0,smoothHeading=0,firstFrame=true,lastPreview=false,lastSpecies='',halfHeight=21,aspect=1,lastViewHeight=0;
-  let lastFirstPerson=false,lastCelebrating=false,eyeHeight=3.05;
+  let lastFirstPerson=false,lastWon=false,eyeHeight=3.05,approachHeading=0,homeOpeningHeight=0;
   const skyColors=['#b8dfe4','#b2dbe2','#9fbbc5','#c1d9d8','#b5cbd7'];
   const waterColors=['#328b9e','#2d8293','#2b687e','#397d8a','#507588'];
   function setOptions(next={}){
@@ -484,91 +498,136 @@ export function createScene(canvas, options = {}) {
       sprite.scale.set(visibleWidth,visibleWidth*112/512,1);
     }
   }
-  function animateHomeFeeding(feeding,won,motion){
+  function homeAdultHeading(feeding){
+    const last=adultFeedingHeadings[Math.max(0,feeding.total-1)%chicks.length];
+    if(wonTime<HOME_APPROACH){
+      return turnTo(approachHeading,adultFeedingHeadings[0],smooth(wonTime,.49,HOME_APPROACH));
+    }
+    if(feeding.celebrating)return turnTo(last,headingTo(adultSpot,familyLook),smooth(wonTime,HOME_CELEBRATION_START,HOME_CELEBRATION_START+.72));
+    if(feeding.recipient<0)return last;
+    const current=adultFeedingHeadings[feeding.recipient];
+    if(feeding.served===0||feeding.phase>=FISH_LEAVES_PARENT)return current;
+    return turnTo(adultFeedingHeadings[1-feeding.recipient],current,smooth(feeding.phase,0,FISH_LEAVES_PARENT));
+  }
+  function animateHomeFeeding(feeding,motion){
     for(const [index,chick] of chicks.entries()){
-      const eating=feeding?.recipient===index;
-      const reaction=eating?Math.sin(Math.PI*feeding.phase):0;
+      const phase=feeding?.recipient===index?feeding.phase:0;
+      const ready=smooth(phase,.2,.58)*(1-smooth(phase,FISH_REACHES_CHICK,.9));
+      const swallow=smooth(phase,.72,.83)*(1-smooth(phase,.88,1));
       const heading=chickFeedingHeadings[index];
+      chick.root.position.copy(chickSpots[index]);
       chick.root.rotation.y=heading;
-      chick.torso.rotation.x=-reaction*.16;
-      chick.root.rotation.z=(Math.sin(t*2+index)*.035+reaction*.055)*motion;
-      chick.root.position.y=.3+reaction*.13*motion;
-      chick.left.rotation.z=-.25-(won?.15+reaction*.4:0);
-      chick.right.rotation.z=.25+(won?.15+reaction*.4:0);
-      chick.setBillOpen(reaction*.45);
-      if(feeding?.celebrating){
-        const elapsed=wonTime-HOME_CELEBRATION_START;
-        const beat=elapsed-index*.17;
-        const hop=(start,length)=>Math.sin(Math.PI*THREE.MathUtils.clamp((beat-start)/length,0,1));
-        const bounce=hop(.17,.48)*.58+hop(.79,.49)*.4;
-        const cheer=Math.max(hop(.12,.59),hop(.74,.62),hop(1.54,.48)*.72);
-        const faceCamera=Math.atan2(goal.x+11-chick.root.position.x,goal.z-3.6-chick.root.position.z);
-        const turn=Math.atan2(Math.sin(faceCamera-heading),Math.cos(faceCamera-heading));
-        chick.root.rotation.y=heading+turn*THREE.MathUtils.smoothstep(elapsed,0,.32);
-        chick.root.rotation.z=(index===0?1:-1)*(.06+cheer*.12*motion);
-        chick.root.position.y=.3+bounce*motion;
-        chick.torso.rotation.x=-.14-cheer*.19*motion;
-        const flippers=.71+cheer*.53*motion;
-        chick.left.rotation.z=-flippers;
-        chick.right.rotation.z=flippers;
-        chick.setBillOpen(.32+cheer*.63*motion);
-      }
+      chick.root.rotation.z=feeding?swallow*(index===0?.09:-.09)*motion:Math.sin(t*2+index)*.035*motion;
+      chick.torso.rotation.x=(ready*.2-swallow*.36)*motion;
+      chick.root.position.y+=ready*.14*motion;
+      const spread=.25+ready*.4+swallow*.16;
+      chick.left.rotation.z=-spread;
+      chick.right.rotation.z=spread;
+      chick.setBillOpen(ready);
+      if(!feeding?.celebrating)continue;
+
+      const elapsed=wonTime-HOME_CELEBRATION_START,beat=elapsed-index*.19;
+      const hop=(start,length)=>Math.sin(Math.PI*THREE.MathUtils.clamp((beat-start)/length,0,1));
+      const bounce=hop(.14,.56)*.7+hop(.8,.49)*.53+hop(1.5,.4)*.21;
+      const cheer=Math.max(hop(.08,.72),hop(.77,.64),hop(1.42,.57));
+      const together=smooth(elapsed,1.4,2.48),showJoy=smooth(elapsed,0,.34);
+      chick.root.position.x-=together*(index===0?.73:1.2);
+      chick.root.position.z+=together*(index===0?.25:-.25);
+      chick.root.position.y+=bounce*motion;
+      chick.root.rotation.y=turnTo(heading,headingTo(chick.root.position,familyLook)+(index===0?-.17:.33),showJoy);
+      chick.root.rotation.z=(index===0?1:-1)*(.085*showJoy+cheer*.18*motion);
+      chick.torso.rotation.x=-.08*showJoy-cheer*.19*motion;
+      const flap=(.54+Math.cos(beat*25)*.36)*cheer*motion;
+      chick.left.rotation.z=-.25-.4*showJoy-flap;
+      chick.right.rotation.z=.25+.4*showJoy+flap;
+      chick.setBillOpen(.28*showJoy+cheer*.69*motion);
     }
     feedFish.visible=feeding?.visible??false;
     if(!feedFish.visible)return;
     player.billTip(adultBill);
     chicks[feeding.recipient].billTip(chickBill);
-    const travel=THREE.MathUtils.smoothstep(feeding.phase,.08,FISH_REACHES_CHICK);
+    const travel=smooth(feeding.phase,FISH_LEAVES_PARENT,FISH_REACHES_CHICK);
+    const lift=motion*.42;
     feedFish.position.lerpVectors(adultBill,chickBill,travel);
-    feedFish.position.y+=Math.sin(travel*Math.PI)*.43*motion;
-    feedFish.rotation.y=Math.atan2(chickBill.x-adultBill.x,chickBill.z-adultBill.z);
-    feedFish.userData.tail.rotation.y=Math.sin(t*21)*.25*motion;
+    feedFish.position.y+=4*travel*(1-travel)*lift;
+    fishDirection.subVectors(chickBill,adultBill);
+    fishDirection.y+=4*(1-2*travel)*lift;
+    feedFish.rotation.set(-Math.atan2(fishDirection.y,Math.hypot(fishDirection.x,fishDirection.z)),Math.atan2(fishDirection.x,fishDirection.z),.15*Math.sin(travel*Math.PI)*motion,'YXZ');
+    const size=lerp(.64,.07,smooth(travel,.68,1));
+    feedFish.scale.setScalar(size);
+    // Follow the nose into the bill, then scale into the bite while the chick swallows.
+    feedFish.position.addScaledVector(fishDirection.normalize(),-.51*size);
+    feedFish.userData.tail.rotation.y=Math.sin(wonTime*23)*.3*motion;
+  }
+  function applyViewHeight(height){
+    if(Math.abs(height-lastViewHeight)<=.001&&lastViewHeight)return;
+    camera.left=-height*aspect;camera.right=height*aspect;camera.top=height;camera.bottom=-height;
+    camera.updateProjectionMatrix();lastViewHeight=height;
+  }
+  function positionHomeCamera(x,z){
+    const opening=smooth(wonTime,0,HOME_APPROACH);
+    const reunion=smooth(wonTime,HOME_CELEBRATION_START-.25,HOME_CELEBRATION_START+1.24);
+    if(!lastWon||firstFrame){
+      const haveOverhead=!firstFrame&&!lastFirstPerson;
+      homeOpeningPosition.set(x+9,8.8,z-12);
+      if(haveOverhead)homeOpeningPosition.copy(camera.position);
+      homeOpeningTarget.set(x,.7,(z+goal.z)/2);
+      if(haveOverhead)homeOpeningTarget.copy(camera.position).sub(CAMERA_OFFSET);
+      homeOpeningHeight=haveOverhead?lastViewHeight:Math.max(6.4,4.3/aspect);
+    }
+    target.set(goal.x+lerp(.19,-.05,reunion),lerp(1.69,1.83,reunion),goal.z+lerp(-.43,-.45,reunion));
+    target.lerpVectors(homeOpeningTarget,target,opening);
+    desired.set(goal.x+lerp(5.5,8,reunion),lerp(4.2,3.6,reunion),goal.z+lerp(-12,-9,reunion));
+    camera.position.lerpVectors(homeOpeningPosition,desired,opening);
+    camera.lookAt(target);
+    const sceneHeight=lerp(Math.max(3.95,3.86/aspect),Math.max(3.58,3.88/aspect),reunion);
+    applyViewHeight(lerp(homeOpeningHeight,sceneHeight,opening));
   }
   function render(state,delta=.016){
     const dt=Math.max(0,Math.min(.05,Number.isFinite(delta)?delta:0));
-    const preview=!!state.preview,won=state.won||state.status==='won',animating=!state.paused||won||preview;
+    const preview=!!state.preview,won=state.won||state.status==='won',animating=!state.paused;
     const firstPerson=state.view==='first'&&!preview&&!won;
     if(animating)t+=dt;
-    wonTime=won?(Number.isFinite(state.homeFeedingTime)?state.homeFeedingTime:wonTime+dt):0;
+    wonTime=won?(Number.isFinite(state.homeFeedingTime)?state.homeFeedingTime:wonTime+(animating?dt:0)):0;
     const feeding=won?homeFeedingProgress(state.food,wonTime):null;
     const celebrating=feeding?.celebrating??false;
-    const motion=settings.reducedMotion?0:1,x=state.x||0,z=state.z||0,viewZ=preview?4:z;
+    const motion=settings.reducedMotion||state.reducedHomecoming?0:1,x=state.x||0,z=state.z||0,viewZ=preview?4:z;
     const reset=preview!==lastPreview||Math.abs(z-previousZ)>50;
     if(reset){firstFrame=true;for(const p of trails)p.visible=false;lastTrailX=-100;}
     const species=state.species||'gentoo';if(species!==lastSpecies){player.setSpecies(species);lastSpecies=species;}
     const swim=state.terrain==='water'&&!state.treatment&&!preview&&!won,moving=state.moving&&!state.treatment&&!won&&!preview,sliding=!swim&&state.slide&&moving;
     let heading=preview?2.08:Number.isFinite(state.heading)?state.heading:0;
     if(won){
-      const firstOrLast=wonTime<HOME_APPROACH||celebrating?0:Math.max(0,feeding.total-1)%chicks.length;
-      const chick=chicks[feeding.recipient>=0?feeding.recipient:firstOrLast];
-      const faceChick=Math.atan2(chick.root.position.x-adultSpot.x,chick.root.position.z-adultSpot.z);
-      const approach=Math.hypot(x-adultSpot.x,z-adultSpot.z)>.2?Math.atan2(adultSpot.x-x,adultSpot.z-z):faceChick;
-      const turn=Math.atan2(Math.sin(faceChick-approach),Math.cos(faceChick-approach));
-      heading=approach+turn*THREE.MathUtils.smoothstep(wonTime,.65,HOME_APPROACH);
+      if(!lastWon)approachHeading=Math.hypot(x-adultSpot.x,z-adultSpot.z)>.2?headingTo({x,z},adultSpot):heading;
+      heading=homeAdultHeading(feeding);
     }
     if(state.treatment)heading=2.6;
     const angle=Math.atan2(Math.sin(heading-smoothHeading),Math.cos(heading-smoothHeading));smoothHeading+=angle*Math.min(1,dt*12);
-    if(firstFrame||won&&dt===0)smoothHeading=heading;
+    if(firstFrame||won)smoothHeading=heading;
     player.root.visible=!firstPerson;
     player.root.scale.setScalar(preview?2.25:1.25);
     player.root.position.set(preview?0:x,swim?.1+Math.sin(t*3)*.05*motion:.31,preview?4:z);
     if(state.treatment){const camp=state.rescues[state.treatment.campIndex];if(camp)player.root.position.set(camp.x-campSide(camp)*2.2,.61,camp.z+.2);}
     if(won){
-      player.root.position.lerp(adultSpot,THREE.MathUtils.smoothstep(wonTime,0,HOME_APPROACH));
+      player.root.position.lerp(adultSpot,smooth(wonTime,0,HOME_APPROACH));
     }
     player.root.rotation.y=smoothHeading;
-    const feedBend=feeding?.recipient>=0?Math.sin(Math.PI*feeding.phase)*.17:0;
-    const tilt=swim||sliding?Math.PI/2:celebrating?.09:feedBend;
-    const tiltBlend=won&&dt===0?1:Math.min(1,dt*12);
+    const feedingPhase=feeding?.phase??0;
+    const feedBend=smooth(feedingPhase,.02,FISH_LEAVES_PARENT)*(1-smooth(feedingPhase,.51,.98))*.27;
+    const familyTurn=celebrating?smooth(wonTime,HOME_CELEBRATION_START,HOME_CELEBRATION_START+.62):0;
+    const tilt=swim||sliding?Math.PI/2:feedBend+familyTurn*.1;
+    const tiltBlend=won?1:Math.min(1,dt*12);
     player.torso.rotation.x+=(tilt-player.torso.rotation.x)*tiltBlend;
     player.torso.position.z=swim||sliding?-1:0;
-    const cold=Math.max(0,(65-(state.insulation??100))/65)*.045+Math.max(0,(35-(state.temperature??100))/35)*.04;
+    const cold=won?0:Math.max(0,(65-(state.insulation??100))/65)*.045+Math.max(0,(35-(state.temperature??100))/35)*.04;
     player.torso.rotation.z=(moving&&!swim&&!sliding?Math.sin(t*10)*.08:0)*motion+Math.sin(t*43)*cold*motion;
-    player.torso.position.y=swim||sliding?.2:(moving?Math.abs(Math.sin(t*10))*.07:Math.sin(t*2)*.018)*motion;
-    player.left.rotation.z=-.3-(swim?.7+Math.sin(t*9)*.45*motion:moving?Math.sin(t*10)*.2*motion:0);
-    player.right.rotation.z=.3+(swim?.7+Math.sin(t*9)*.45*motion:moving?Math.sin(t*10)*.2*motion:0);
-    const walking=(moving&&!swim&&!sliding)||(won&&wonTime<HOME_APPROACH);
-    player.feet.forEach((f,i)=>f.rotation.x=walking?Math.sin(t*(won?13:10)+i*Math.PI)*.4*motion:0);
+    const stepTime=won?wonTime*13:t*10;
+    const gait=won?1-smooth(wonTime,HOME_APPROACH-.28,HOME_APPROACH):Number(moving&&!swim&&!sliding);
+    player.torso.position.y=swim||sliding?.2:(gait*Math.abs(Math.sin(stepTime))*.07+(!won?Math.sin(t*2)*.018:0))*motion;
+    const swing=swim?.7+Math.sin(t*9)*.45*motion:Math.sin(stepTime)*.2*gait*motion;
+    player.left.rotation.z=-.3-swing-familyTurn*.24;
+    player.right.rotation.z=.3+swing+familyTurn*.24;
+    player.feet.forEach((f,i)=>f.rotation.x=Math.sin(stepTime+i*Math.PI)*.4*gait*motion);
     player.setOilOpacity(preview?0:Math.min(.93,(state.oil||0)/85));
     shadow.position.set(player.root.position.x,.315,player.root.position.z);shadow.visible=!swim&&!firstPerson;shadow.scale.set(preview?2.4:1.3,preview?1.6:sliding?1.6:.85,1);
     previewChick.root.visible=preview;previewChick.root.position.set(-3.5,.31,5);previewChick.root.rotation.y=2.4;previewChick.torso.rotation.z=Math.sin(t*2)*.05*motion;
@@ -619,7 +678,10 @@ export function createScene(canvas, options = {}) {
     animateHazards(state,viewZ,t,motion,firstPerson);
     const late=state.stage===4&&!preview,wind=state.wind||0;snow.visible=late&&!won&&!settings.reducedMotion;snow.position.set(x,0,z);
     if(snow.visible){snow.material.opacity=.24+wind*.5;for(let i=0;i<snowCount;i++){snowArray[i*3]+=dt*(3+wind*16);if(snowArray[i*3]>32)snowArray[i*3]=-32;snowArray[i*3+1]-=dt*(1.4+wind*2);if(snowArray[i*3+1]<0)snowArray[i*3+1]=20;}snowGeo.attributes.position.needsUpdate=true;}
-    const stage=preview?0:Math.max(0,Math.min(4,state.stage||0));targetColor.set(skyColors[stage]);scene.background.lerp(targetColor,Math.min(1,dt*1.2));scene.fog.color.copy(scene.background);
+    const stage=preview?0:Math.max(0,Math.min(4,state.stage||0));targetColor.set(skyColors[stage]);
+    if(won){targetColor.lerp(homeLight,.25*smooth(wonTime,0,HOME_CELEBRATION_START));scene.background.copy(targetColor);}
+    else scene.background.lerp(targetColor,Math.min(1,dt*1.2));
+    scene.fog.color.copy(scene.background);
     targetColor.set(waterColors[stage]);m.water.color.lerp(targetColor,firstFrame?1:Math.min(1,dt*1.3));
     if(motion&&animating){
       seaTexture.offset.x=(seaTexture.offset.x-(state.current?.x??.45)*dt*.022)%1;
@@ -627,22 +689,24 @@ export function createScene(canvas, options = {}) {
     }
     currentArrows.forEach((g,i)=>{g.visible=(stage===2||stage===3)&&!preview;g.position.set(-10+i*10,.045,z+8+i*2);g.rotation.y=Math.atan2(state.current?.x||0,state.current?.z||.001);});
     nestLabel.visible=!won;
-    for(const neighbor of homeNeighbors)neighbor.visible=!celebrating;
-    animateHomeFeeding(feeding,won,motion);
+    for(const neighbor of homeNeighbors)neighbor.visible=!won;
+    animateHomeFeeding(feeding,motion);
     const narrow=canvas.clientWidth<560,cameraOffset=preview?PREVIEW_CAMERA_OFFSET:CAMERA_OFFSET;
-    if(celebrating){target.set(goal.x+1.3,1.32,goal.z+.12);desired.set(goal.x+11,4.4,goal.z-3.6);}
-    else if(won){target.set(goal.x+.4,1.35,goal.z+.25);desired.set(goal.x+19,17,goal.z-24);}
-    else{target.set(preview?(narrow?12:10):x,0,preview?(narrow?-3:9):z+9);desired.set(target.x+cameraOffset.x,target.y+cameraOffset.y,target.z+cameraOffset.z);}
-    const desiredHeight=celebrating?(narrow?5.8:4.8):won?(narrow?10.4:8.3):preview&&!narrow&&aspect>=.95?halfHeight*.81:halfHeight;
-    const cut=firstFrame||lastCelebrating!==celebrating||settings.reducedMotion;
-    const viewHeight=lastViewHeight&&!cut?THREE.MathUtils.lerp(lastViewHeight,desiredHeight,Math.min(1,dt*3)):desiredHeight;
-    if(Math.abs(viewHeight-lastViewHeight)>.001||!lastViewHeight){camera.left=-viewHeight*aspect;camera.right=viewHeight*aspect;camera.top=viewHeight;camera.bottom=-viewHeight;camera.updateProjectionMatrix();lastViewHeight=viewHeight;}
-    if(cut)camera.position.copy(desired);else camera.position.lerp(desired,Math.min(1,dt*5));
-    if(won)camera.lookAt(target);else camera.lookAt(camera.position.x-cameraOffset.x,camera.position.y-cameraOffset.y,camera.position.z-cameraOffset.z);
+    if(won)positionHomeCamera(x,z);
+    else{
+      target.set(preview?(narrow?12:10):x,0,preview?(narrow?-3:9):z+9);
+      desired.copy(target).add(cameraOffset);
+      const height=preview&&!narrow&&aspect>=.95?halfHeight*.81:halfHeight;
+      const cut=firstFrame||lastWon||settings.reducedMotion;
+      applyViewHeight(cut||!lastViewHeight?height:lerp(lastViewHeight,height,Math.min(1,dt*3)));
+      if(cut)camera.position.copy(desired);else camera.position.lerp(desired,Math.min(1,dt*5));
+      camera.lookAt(camera.position.x-cameraOffset.x,camera.position.y-cameraOffset.y,camera.position.z-cameraOffset.z);
+    }
     if(firstPerson)positionEye(state,x,z,sliding,moving,dt);
     resizeSceneLabels(firstPerson);
     sun.position.set(player.root.position.x-25,55,player.root.position.z-35);sun.target.position.copy(player.root.position);
-    firstFrame=false;previousZ=z;lastPreview=preview;lastFirstPerson=firstPerson;lastCelebrating=celebrating;
+    sun.color.copy(daylight).lerp(homeLight,won?.65*smooth(wonTime,0,HOME_CELEBRATION_START):0);
+    firstFrame=false;previousZ=z;lastPreview=preview;lastFirstPerson=firstPerson;lastWon=won;
     renderer.render(scene,firstPerson?eyeCamera:camera);
   }
   function dispose(){
