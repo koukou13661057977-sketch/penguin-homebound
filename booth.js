@@ -2,6 +2,8 @@
 export const BOOTH_KEY='homebound-booth-v1';
 export const BOOTH_DEFAULTS=Object.freeze({difficulty:'normal',duration:105});
 const difficulties=['easy','normal','hard'],durations=[90,105,120];
+const CURRENT_RULESET=3;
+const supportedRulesets=[CURRENT_RULESET,2,1];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const finite=(value,min,max)=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max;
 const integer=(value,min,max)=>Number.isInteger(value)&&finite(value,min,max);
@@ -27,7 +29,9 @@ function settingsFrom(value,base=BOOTH_DEFAULTS){
 function entryFrom(value,date){
  if(!object(value)||value.date!==date||!validDate(value.date)||!integer(value.number,1,9999999)||!difficulties.includes(value.difficulty)||!durations.includes(value.duration))return null;
  if(value.runId!==`booth-${date}-${value.number}`)return null;
- return {runId:value.runId,number:value.number,date,difficulty:value.difficulty,duration:value.duration,ruleset:value.ruleset===2?2:1};
+ const ruleset=value.ruleset??1;
+ if(!supportedRulesets.includes(ruleset))return null;
+ return {runId:value.runId,number:value.number,date,difficulty:value.difficulty,duration:value.duration,ruleset};
 }
 function resultFrom(value,date){
  const entry=entryFrom(value,date);if(!entry||typeof value.won!=='boolean'||!integer(value.food,0,10)||!finite(value.oil,0,100)||!finite(value.time,0,entry.duration+1))return null;
@@ -91,7 +95,7 @@ export function createBooth(storage,options={}){
  function summary(day){
   return {date:day.date,participants:day.participants,finished:day.finished,wins:day.wins,completionRate:day.participants?day.wins/day.participants*100:0,averageTime:day.finished?day.totalTime/day.finished:0};
  }
- function records(day,difficulty,duration,ruleset=2){return day.records.filter(r=>r.difficulty===difficulty&&r.duration===duration&&r.ruleset===ruleset).sort(rankOrder);}
+ function records(day,difficulty,duration,ruleset){return day.records.filter(r=>r.difficulty===difficulty&&r.duration===duration&&r.ruleset===ruleset).sort(rankOrder);}
  prune(today());
  return {
   get data(){return clone(data);},get available(){return available;},
@@ -99,7 +103,7 @@ export function createBooth(storage,options={}){
   beginRun(options={}){
    const date=today(),day=dayFor(date,true);
    if(day.nextNumber>9999999)throw new RangeError('Daily participant limit reached');
-   const entry={runId:`booth-${date}-${day.nextNumber}`,number:day.nextNumber++,date,...settingsFrom(options,data.settings),ruleset:2};
+   const entry={runId:`booth-${date}-${day.nextNumber}`,number:day.nextNumber++,date,...settingsFrom(options,data.settings),ruleset:CURRENT_RULESET};
    day.participants++;day.pending=[...day.pending,entry].slice(-32);persist();return clone(entry);
   },
   abandonRun(runId){
@@ -122,7 +126,7 @@ export function createBooth(storage,options={}){
    const index=records(day,result.difficulty,result.duration,result.ruleset).findIndex(r=>r.runId===result.runId);
    return {saved:persist(),rank:index<0?null:index+1};
   },
-  getRecords(difficulty=data.settings.difficulty,duration=data.settings.duration,ruleset=2){
+  getRecords(difficulty=data.settings.difficulty,duration=data.settings.duration,ruleset=CURRENT_RULESET){
    const day=dayFor(today());return day?records(day,difficulty,duration,ruleset).map(clone):[];
   },
   getSummary(){return summary(dayFor(today())||emptyDay(today()));},
@@ -133,7 +137,7 @@ export function createBooth(storage,options={}){
   exportCSV(){
    const header=['date','participant','difficulty','duration_seconds','rank','fish_delivered','final_oil_percent','time_seconds','rescue_reports','max_oil_percent','extra_energy','ruleset'];
    const day=dayFor(today()),rows=[header];
-   if(day)for(const difficulty of difficulties)for(const duration of durations)for(const ruleset of [2,1]){
+   if(day)for(const difficulty of difficulties)for(const duration of durations)for(const ruleset of supportedRulesets){
     records(day,difficulty,duration,ruleset).forEach((r,index)=>rows.push([r.date,String(r.number).padStart(4,'0'),difficulty,duration,index+1,r.food,r.oil,r.time.toFixed(2),r.signalsReported,r.maxOil,r.oilEnergyCost.toFixed(2),r.ruleset]));
    }
    return rows.map(row=>row.join(',')).join('\r\n')+'\r\n';

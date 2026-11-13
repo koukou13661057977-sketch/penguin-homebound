@@ -361,19 +361,24 @@ body.playing.first-person:not(.booth) .hud:has(.tutorial:not(.hidden)) #view-hin
 .species-select { min-inline-size: 0 }
 .species-select > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px }
 .species-select button {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 4px;
  min-width: 0;
- padding: 6px 3px 8px;
+ min-height: 44px;
+ padding: 6px 4px 8px;
  color: #315860;
  background: #f3faf4da;
  font-weight: 600;
  line-height: 1.4;
+ text-align: center;
 }
 .species-select button::before {
  content: "";
  display: block;
  width: min(100%, 65px);
  aspect-ratio: 1;
- margin: 0 auto 5px;
  border-radius: 5px;
  background: #d6e9e7 center / cover no-repeat;
 }
@@ -385,11 +390,31 @@ body.playing.first-person:not(.booth) .hud:has(.tutorial:not(.hidden)) #view-hin
  background: var(--ink);
  border-color: var(--ink);
 }
+.species-name { display: block }
+.species-trait {
+ display: block;
+ max-width: 100%;
+ margin-top: auto;
+ padding: 2px 5px;
+ border-radius: 4px;
+ background: #dcebe4;
+ color: #254953;
+ font-size: 11px;
+ font-weight: 500;
+ line-height: 1.3;
+ text-wrap: balance;
+}
+.species-select button[aria-pressed="true"] .species-trait {
+ background: #cce9e6;
+ color: #143b45;
+}
+.species-select button:focus-visible { outline: 2px solid #286774; outline-offset: 2px }
 body.booth .species-select { max-width: 355px }
 @media (max-width: 560px) {
  body.booth .species-select { max-width: none }
  .species-select button { padding: 5px 3px 7px }
  .species-select button::before { width: min(100%, 57px) }
+ .species-trait { padding-inline: 3px }
 }
 @media (max-height: 500px) and (orientation: landscape) {
  body.booth .intro .species-select { grid-column: 1; grid-row: 3; margin: 0; max-width: none }

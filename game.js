@@ -1,11 +1,11 @@
-import {createScene,HOME_FEEDING_MS,HOME_CELEBRATION_START,homeFeedingProgress} from './scene.js?v=1.12.0';
-import {createRun,step,eat,rescue,interact,scoreRun,serializeRun,restoreRun,DIFFICULTIES} from './rules.js';
+import {createScene,HOME_FEEDING_MS,HOME_CELEBRATION_START,homeFeedingProgress} from './scene.js?v=1.13.0';
+import {createRun,step,eat,rescue,interact,scoreRun,serializeRun,restoreRun,DIFFICULTIES,SPECIES_RULESET} from './rules.js?v=1.13.0';
 import {WORLD,getWorld,laneAt} from './world.js';
 import {insideHazard} from './hazards.js';
-import {createProfile,ACHIEVEMENTS} from './profile.js?v=1.12.0';
+import {createProfile,ACHIEVEMENTS} from './profile.js?v=1.13.0';
 import {createAudio} from './audio.js?v=1.12.1';
-import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js?v=1.12.0';
-import {createBooth} from './booth.js';
+import {tr,getLanguage,setLanguage,initLanguage,applyLanguage,GAME_LANGUAGES} from './i18n.js?v=1.13.0';
+import {createBooth} from './booth.js?v=1.13.0';
 import {
  screenToWorld,worldToScreenAxes,viewToWorld,worldToViewAxes,
  FIRST_PERSON_PITCH,wrapViewYaw,clampViewPitch,
@@ -29,7 +29,7 @@ let resultView=null,resultElapsed=null,lastToast='';
 let boothEntry=null,boothPhase='ready',practiceTime=0,practiceMoved=false,practiceCaught=false,practiceStart={x:0,z:5},lastActivity=0,idleDeadline=0,idleWasPaused=false,returnDeadline=0;
 const boothSpeciesOrder=['gentoo','adelie','chinstrap'];
 let boothSpecies=null;
-let boardRuleset=2;
+let boardRuleset=SPECIES_RULESET,nextBoardRuleset=SPECIES_RULESET;
 const map=$('route-map').getContext('2d');
 const text=(id,value)=>{const el=$(id),v=tr(String(value));if(el.textContent!==v)el.textContent=v;};
 const formatTime=s=>`${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
@@ -90,7 +90,7 @@ function checkpoint(){
 function refreshMenu(){
  const saved=boothMode?null:safeRestore(profile.getCheckpoint());$('continue').classList.toggle('hidden',!saved);
  if(saved){const chapter=WORLD.chapters[saved.stage];$('continue').innerHTML='';const label=document.createElement('span');label.textContent=tr(`继续 · ${chapter.title}`);const arrow=document.createElement('span');arrow.textContent='↗';$('continue').append(label,arrow);}
- text('save-note',profile.available?'本机自动保存 · 1.12':'此浏览器无法保存 · 当前页面仍可完整游玩');
+ text('save-note',profile.available?'本机自动保存 · 1.13':'此浏览器无法保存 · 当前页面仍可完整游玩');
  if(boothMode){text('save-note','每位玩家重新开始 · 今日成绩保存在本机');text('booth-banner',`摊位体验 · ${DIFFICULTIES[difficulty].label}难度 · ${booth.data.settings.duration} 秒`);}
  text('show-board',boothMode?'今日排行榜':'旅程记录');
  document.querySelectorAll('[data-difficulty]').forEach(b=>{const selected=b.dataset.difficulty===difficulty;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
@@ -318,9 +318,12 @@ function showBoard(diff=difficulty){
  const stats=profile.data.stats;text('profile-summary',`旅程结算 ${stats.runs} 次 · 平安归巢 ${stats.wins} 次 · 带回 ${stats.totalFish} 条鱼`);
  if(boothMode)text('profile-summary',`今日排行榜 · ${booth.data.settings.duration} 秒场次`);
  const fetchRecords=version=>boothMode?booth.getRecords(diff,booth.data.settings.duration,version):profile.getRecords(diff,version);
+ const earlierBoards=[2,1].filter(version=>fetchRecords(version).length);
+ if(boardRuleset!==SPECIES_RULESET&&!earlierBoards.includes(boardRuleset))boardRuleset=SPECIES_RULESET;
  const list=fetchRecords(boardRuleset);$('board-content').replaceChildren();
- $('board-version').classList.toggle('hidden',boardRuleset===2&&!fetchRecords(1).length);
- text('board-version',boardRuleset===2?'查看旧版成绩':'返回当前榜单');
+ nextBoardRuleset=earlierBoards.find(version=>version<boardRuleset)??SPECIES_RULESET;
+ $('board-version').classList.toggle('hidden',!earlierBoards.length);
+ text('board-version',nextBoardRuleset===SPECIES_RULESET?'返回当前榜单':boardRuleset===SPECIES_RULESET?'查看旧版成绩':'查看更早成绩');
  if(!list.length){const p=document.createElement('p');p.className='board-empty';p.textContent=tr('还没有归巢成绩。');$('board-content').append(p);}
  else $('board-content').append(scoreTable(list,boothMode));
  $('achievements').replaceChildren();for(const a of ACHIEVEMENTS){const earned=profile.data.achievements.includes(a.id),el=document.createElement('div'),title=document.createElement('b'),copy=document.createElement('p');el.className='achievement'+(earned?' earned':'');title.textContent=(earned?'✦ ':'○ ')+tr(a.title);copy.textContent=tr(a.description);el.append(title,copy);$('achievements').append(el);}
@@ -458,9 +461,9 @@ $('start').onclick=requestStart;$('confirm-start').onclick=()=>{profile.clearChe
 $('continue').onclick=()=>{const saved=safeRestore(profile.getCheckpoint());if(saved)launch(saved);else{profile.clearCheckpoint();refreshMenu();toast('保存的旅程无法读取，请重新出发。');}};
 $('again').onclick=()=>launch();$('home').onclick=home;$('quit').onclick=home;$('pause').onclick=pause;$('resume').onclick=resume;
 $('pause-view').onclick=togglePauseView;
-$('show-help').onclick=()=>openPanel('help-dialog');$('show-journal').onclick=()=>openPanel('journal-dialog');$('show-board').onclick=()=>{boardRuleset=2;showBoard();};$('show-settings').onclick=()=>openPanel('settings-dialog');$('pause-help').onclick=()=>openPanel('help-dialog');$('pause-settings').onclick=()=>openPanel('settings-dialog');$('dismiss-tutorial').onclick=dismissTutorial;
+$('show-help').onclick=()=>openPanel('help-dialog');$('show-journal').onclick=()=>openPanel('journal-dialog');$('show-board').onclick=()=>{boardRuleset=SPECIES_RULESET;showBoard();};$('show-settings').onclick=()=>openPanel('settings-dialog');$('pause-help').onclick=()=>openPanel('help-dialog');$('pause-settings').onclick=()=>openPanel('settings-dialog');$('dismiss-tutorial').onclick=dismissTutorial;
 $('board-version').onclick=()=>{
- boardRuleset=boardRuleset===2?1:2;
+ boardRuleset=nextBoardRuleset;
  showBoard(document.querySelector('[data-board][aria-pressed="true"]')?.dataset.board||difficulty);
 };
 $('sound').onclick=()=>{unlockAudio();profile.saveSettings({sound:!settings.sound});applySettings();audio.cue('ui');};

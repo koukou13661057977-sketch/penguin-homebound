@@ -3,12 +3,14 @@ import {initHazards,updateHazards,updateFish,blockLanding,catchNet,workFree} fro
 import {FIRST_PERSON_PITCH,wrapViewYaw,clampViewPitch} from './controls.js';
 export {WORLD,BOOTH_WORLD,getWorld,terrainAt};
 export const worldFor=s=>getWorld(s?.mode);
+export const SPECIES_RULESET=3;
 export const DIFFICULTIES=Object.freeze({
  easy:Object.freeze({label:'低',subtitle:'从容归巢',energyDrain:.43,cold:.36,oilRate:10,oilDrift:.84,fishEnergy:37,rescueWarmth:56,debrisDrift:.75,netWidth:.83,netCost:4,netRelease:.65,visitorCrossing:.76,storm:.9}),
  normal:Object.freeze({label:'中',subtitle:'海峡冒险',energyDrain:.83,cold:.55,oilRate:16,oilDrift:1,fishEnergy:32,rescueWarmth:47,debrisDrift:1,netWidth:1,netCost:8,netRelease:.9,visitorCrossing:1,storm:1.4}),
  hard:Object.freeze({label:'高',subtitle:'逆风远行',energyDrain:1.06,cold:.68,oilRate:22,oilDrift:1.18,fishEnergy:28,rescueWarmth:40,debrisDrift:1.24,netWidth:1.11,netCost:13,netRelease:1.2,visitorCrossing:1.26,storm:1.85}),
 });
-const SPECIES=['gentoo','adelie','chinstrap'];
+const SPECIES_TRAITS={gentoo:{swimSpeed:1.12},adelie:{waterCold:.85},chinstrap:{slideSteering:1.25}};
+const SPECIES=Object.keys(SPECIES_TRAITS);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const inside=(x,z,p,margin=0)=>((x-p.x)/(p.rx+margin))**2+((z-p.z)/(p.rz+margin))**2<=1;
@@ -20,7 +22,7 @@ function tell(s,message,seconds=4){s.message=message;s.messageUntil=s.time+secon
 export function createRun(difficulty='normal',options={}){
  const key=Object.hasOwn(DIFFICULTIES,difficulty)?difficulty:'normal',world=getWorld(options.mode);
  const state={
- version:WORLD.version,rankingRuleset:2,mode:options.mode==='booth'?'booth':'normal',difficulty:key,species:SPECIES.includes(options?.species)?options.species:'gentoo',
+ version:WORLD.version,rankingRuleset:SPECIES_RULESET,mode:options.mode==='booth'?'booth':'normal',difficulty:key,species:SPECIES.includes(options?.species)?options.species:'gentoo',
  view:options.view==='first'?'first':'overhead',viewYaw:0,viewPitch:FIRST_PERSON_PITCH,
  x:0,z:5,vx:0,vz:0,heading:0,time:0,stage:0,checkpoint:0,terrain:'ice',
  temperature:100,energy:100,oil:0,insulation:100,food:0,requiredFood:4,maxFood:10,
@@ -98,12 +100,22 @@ export function step(s,input={},elapsed=0){
   return s;
  }
  let ix=Number.isFinite(input.x)?clamp(input.x,-1,1):0,iz=Number.isFinite(input.z)?clamp(input.z,-1,1):0;
- const mag=Math.hypot(ix,iz);if(mag>1){ix/=mag;iz/=mag;}
- if(s.snag){workFree(s,ix,iz,config,dt);ix=iz=0;s.vx=s.vz=0;}
- const intent=Math.hypot(ix,iz)>.05;s.terrain=terrainAt(s.x,s.z,world);contacts(s);
+ let inputLength=Math.hypot(ix,iz);
+ if(inputLength>1){ix/=inputLength;iz/=inputLength;inputLength=1;}
+ if(s.snag){workFree(s,ix,iz,config,dt);ix=iz=inputLength=0;s.vx=s.vz=0;}
+ const intent=inputLength>.05;s.terrain=terrainAt(s.x,s.z,world);contacts(s);
  const sliding=(Boolean(input.slide)||(!intent&&s.slide))&&s.terrain==='ice';
- const speed=(s.terrain==='water'?4.6:sliding?7.3:3.9)*(1-s.oil*.003)*(s.energy<20?.8:1)*(1-(s.inShelter?0:s.wind)*.27);
- const response=1-Math.exp(-(intent?(sliding?3.5:9):(sliding||s.slide?3:12))*dt);
+ // Older resumable runs still use the physics and leaderboard they started with.
+ const traits=s.rankingRuleset===SPECIES_RULESET?SPECIES_TRAITS[s.species]:undefined;
+ const topSpeed=s.terrain==='water'?4.6*(traits?.swimSpeed??1):sliding?7.3:3.9;
+ const speed=topSpeed*(1-s.oil*.003)*(s.energy<20?.8:1)*(1-(s.inShelter?0:s.wind)*.27);
+ let responseRate=intent?(sliding?3.5:9):(sliding||s.slide?3:12);
+ if(traits?.slideSteering&&sliding&&intent&&s.moving){
+  // Ignore small alignment changes so a straight slide accelerates the same way for everyone.
+  const aligned=ix*s.vx+iz*s.vz>=inputLength*s.speed*.995;
+  if(!aligned)responseRate*=traits.slideSteering;
+ }
+ const response=1-Math.exp(-responseRate*dt);
  s.vx+=(ix*speed-s.vx)*response;s.vz+=(iz*speed-s.vz)*response;
  if(!intent&&Math.hypot(s.vx,s.vz)<.035)s.vx=s.vz=0;
  const b=world.bounds,previousX=s.x,previousZ=s.z,nx=clamp(s.x+s.vx*dt,b.minX,b.maxX);
@@ -128,7 +140,7 @@ export function step(s,input={},elapsed=0){
  const extraEnergy=s.oil*.012*(s.inShelter?.3:1),extraCold=s.oil*.018*(s.inShelter?.3:1);
  s.oilEnergyCost+=extraEnergy*dt;s.oilColdCost+=extraCold*dt;
  s.energy=Math.max(0,s.energy-(config.energyDrain*effort+extraEnergy+(s.temperature<30?.2:0))*dt);
- const exposure=s.terrain==='water'?1.4:s.stage===4&&!s.inShelter?1.25:.5;
+ const exposure=s.terrain==='water'?1.4*(traits?.waterCold??1):s.stage===4&&!s.inShelter?1.25:.5;
  const windChill=s.inShelter?0:s.wind*config.storm;
  const warming=s.inShelter?(s.moving?.45:3):0;
  s.temperature=clamp(s.temperature+(warming-config.cold*exposure-extraCold-windChill)*dt,0,100);
@@ -205,7 +217,7 @@ export function restoreRun(raw){
    s.viewYaw=wrapViewYaw(r.camera.yaw);
    s.viewPitch=clampViewPitch(r.camera.pitch);
   }
-  if(!legacy&&r.rankingRuleset!==undefined&&![1,2].includes(r.rankingRuleset))return null;
+  if(!legacy&&r.rankingRuleset!==undefined&&![1,2,SPECIES_RULESET].includes(r.rankingRuleset))return null;
   s.rankingRuleset=legacy?1:r.rankingRuleset??2;
   if(r.runId!==undefined){if(typeof r.runId!=='string'||r.runId.length>100)return null;s.runId=r.runId;}
   for(const [key,[lo,hi]]of Object.entries(NUMERIC)){if(!Number.isFinite(r[key])||r[key]<lo||r[key]>hi)return null;s[key]=r[key];}

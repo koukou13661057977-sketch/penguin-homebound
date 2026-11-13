@@ -10,6 +10,8 @@ export const ACHIEVEMENTS = Object.freeze([
   {id:'all-levels',title:'熟悉每一种海况',description:'分别完成低、中、高三档难度。'},
 ].map(Object.freeze));
 const difficulties=['easy','normal','hard'];
+const CURRENT_RULESET=3;
+const supportedRulesets=[1,2,CURRENT_RULESET];
 const achievementIds=new Set(ACHIEVEMENTS.map(a=>a.id));
 const finite=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=max;
 const copy=value=>JSON.parse(JSON.stringify(value));
@@ -27,7 +29,9 @@ function settingsFrom(input,base=DEFAULT_SETTINGS){
 }
 function validRecord(r){
   if(!r||typeof r!=='object'||!difficulties.includes(r.difficulty)||typeof r.won!=='boolean'||!finite(r.food,0,10)||!Number.isInteger(r.food)||!finite(r.oil,0,100)||!finite(r.time,0,86400))return null;
-  const result={ruleset:r.ruleset===2?2:1,difficulty:r.difficulty,food:r.food,oil:r.oil,time:r.time,won:r.won};
+  const ruleset=r.ruleset??1;
+  if(!supportedRulesets.includes(ruleset))return null;
+  const result={ruleset,difficulty:r.difficulty,food:r.food,oil:r.oil,time:r.time,won:r.won};
   for(const [name,max] of [['signalsReported',100],['totalSignals',100],['maxOil',100],['fishEaten',10000],['rescuesUsed',100],['exposureSeconds',86400],['oilEnergyCost',1000000],['oilColdCost',1000000],['score',1000000]]){
     result[name]=finite(r[name],0,max)?r[name]:(name==='maxOil'?r.oil:0);
   }
@@ -89,7 +93,7 @@ export function createProfile(storage){
   return {
     get data(){return data;},get available(){return available;},
     saveSettings(partial){data.settings=settingsFrom(partial,data.settings);return persist();},
-    getRecords(difficulty,ruleset){return data.records.filter(r=>r.difficulty===difficulty&&(ruleset===undefined||r.ruleset===ruleset)).sort(sortRecords).map(copy);},
+    getRecords(difficulty,ruleset=CURRENT_RULESET){return data.records.filter(r=>r.difficulty===difficulty&&r.ruleset===ruleset).sort(sortRecords).map(copy);},
     setCheckpoint(snapshot){
       if(snapshot===null){data.checkpoint=null;return persist();}
       const checked=checkpointFrom(snapshot);if(!checked)return false;
@@ -99,7 +103,7 @@ export function createProfile(storage){
     clearCheckpoint(){data.checkpoint=null;return persist();},
     resetRecords(){data.records=[];data.achievements=[];data.stats=emptyStats();data.recentRunIds=[];return persist();},
     recordRun(input){
-      const r=validRecord({...input,ruleset:input?.ruleset??2});
+      const r=validRecord({...input,ruleset:input?.ruleset??CURRENT_RULESET});
       if(!r)return {newAchievements:[],saved:false,rank:null,invalid:true};
       if(r.runId&&data.recentRunIds.includes(r.runId)){
         const index=data.records.filter(v=>v.difficulty===r.difficulty&&v.ruleset===r.ruleset).sort(sortRecords).findIndex(v=>v.runId===r.runId);

@@ -1,8 +1,8 @@
-import {STATIC_COPY} from './copy-static.js?v=1.12.0';
+import {STATIC_COPY} from './copy-static.js?v=1.13.0';
 import {WORLD_COPY} from './copy-world.js?v=1.12.0';
 import {GAME_COPY} from './copy-game.js?v=1.12.0';
 import {BOOTH_COPY} from './copy-booth.js?v=1.12.0';
-import {COAST_COPY} from './copy-coast.js?v=1.12.0';
+import {COAST_COPY} from './copy-coast.js?v=1.13.0';
 
 let language='zh';
 export const GAME_LANGUAGES=Object.freeze(['zh','zh-Hant','en']);
